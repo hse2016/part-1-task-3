@@ -1,18 +1,3 @@
 language: node_js
 node_js:
   - "6.1.0"
-
-matrix:
-  include:
-
-  - env: test-base
-    script:
-      - npm run test_base
-
-  - env: test-advanced
-    script:
-      - npm run test_advanced
-
-  - env: test-bonus
-    script:
-      - npm run test_bonus
