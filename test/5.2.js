@@ -1,10 +1,9 @@
 const rq = require('supertest');
 const app = require('../index');
 const fs = require('fs');
-const fsExtra = require('fs-extra');
 const h = require('./helpers/files');
 
-describe.only('Check transform', () => {
+describe('Check transform', () => {
 
     let prefix = '/v1/';
     let rnd = h.rndDir();
