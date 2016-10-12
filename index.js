@@ -22,11 +22,20 @@ var getCookie = function(request) {
 };
 
 var isAuthorized = function(cookie) {
-  return /^authorized=/.test(cookie);
+  return /^authorized=.*/.test(cookie);
 };
 
+// cookie middleware
 app.use(function(request, response, next) {
-  console.log(getCookie(request));
+  let cookie = getCookie(request);
+
+  // if not authorized, then error
+  if (! isAuthorized(cookie)) {
+    res.end(403, {error: 'Not authorized'});
+    return;
+  }
+
+  // authorized
   next();
 });
 
