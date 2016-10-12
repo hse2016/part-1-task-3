@@ -5,9 +5,20 @@ const app = express();
 
 const PORT = process.env.PORT || 4000;
 
-app.use(function (req, res, next) {
-    console.log('Time: %d', Date.now());
-    next();
+function getCookie(req){
+    if (req === null || req === undefined) return false;
+    var pattern = RegExp('authorize' + "=.[^;]*");
+    var matched = req.match(pattern);
+    return matched;
+}
+
+app.use('/', function (req, res) {
+    console.log(req.headers.cookie)
+    if (getCookie(req.headers.cookie)) {
+        res.status(200).end();
+    } else {
+        res.status(403).end();
+    }
 });
 
 app.listen(PORT, function () {
