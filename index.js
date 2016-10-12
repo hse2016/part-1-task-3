@@ -14,7 +14,7 @@ function getCookie(req){
     return matched;
 }
 
-app.use('/', function (req, res, next) {
+app.use(function (req, res, next) {
     var begin = new Date().getTime();
     if (getCookie(req.headers.cookie)) {
         res.status(200);
@@ -27,6 +27,12 @@ app.use('/', function (req, res, next) {
     console.log(logged_time);
 
     res.set('X-Time', logged_time).end();
+});
+
+app.use(function (req, res, next) {
+    console.log(req.method + " /" + req.originalUrl);
+    res.set('X-Request-Url', req.method + " " + req.originalUrl);
+    next();
 });
 
 app.listen(PORT, function () {
