@@ -5,8 +5,24 @@ const app = express();
 
 const PORT = process.env.PORT || 4000;
 
+var getCookie = function(request) {
+  if (! (request.hasOwnProperty('headers'))) {
+    return null;
+  }
+
+  if (! (request.headers.hasOwnProperty('cookie'))) {
+    return null;
+  }
+
+  if (request.headers.cookie === '') {
+    return null;
+  }
+
+  return request.headers.cookie;
+};
+
 app.use(function(request, response, next) {
-  console.log(request);
+  console.log(request.headers);
   next();
 });
 
