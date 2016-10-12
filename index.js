@@ -5,6 +5,8 @@ const app = express();
 
 const PORT = process.env.PORT || 4000;
 
+var logged_time = 0;
+
 function getCookie(req){
     if (req === null || req === undefined) return false;
     var pattern = RegExp('authorize' + "=.[^;]*");
@@ -12,13 +14,19 @@ function getCookie(req){
     return matched;
 }
 
-app.use('/', function (req, res) {
-    console.log(req.headers.cookie)
+app.use('/', function (req, res, next) {
+    var begin = new Date().getTime();
     if (getCookie(req.headers.cookie)) {
-        res.status(200).end();
+        res.status(200);
+        next();
     } else {
-        res.status(403).end();
+        res.status(403);
     }
+    var end = new Date().getTime();
+    logged_time += end - begin;
+    console.log(logged_time);
+
+    res.set('X-Time', logged_time).end();
 });
 
 app.listen(PORT, function () {
