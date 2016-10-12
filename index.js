@@ -21,8 +21,12 @@ var getCookie = function(request) {
   return request.headers.cookie;
 };
 
+var isAuthorized = function(cookie) {
+  return /^authorized=/.test(cookie);
+};
+
 app.use(function(request, response, next) {
-  console.log(request.headers);
+  console.log(getCookie(request));
   next();
 });
 
