@@ -14,25 +14,47 @@ function getCookie(req){
     return matched;
 }
 
-app.use(function (req, res, next) {
-    var begin = new Date().getTime();
-    if (getCookie(req.headers.cookie)) {
-        res.status(200);
-        next();
-    } else {
-        res.status(403);
-    }
+function setTime(begin, res) {
     var end = new Date().getTime();
     logged_time += end - begin;
     console.log(logged_time);
 
-    res.set('X-Time', logged_time).end();
+    res.set('X-Time', logged_time);
+}
+
+
+app.use('/', function(req, res, next) {
+    var begin = new Date().getTime();
+
+    if (getCookie(req.headers.cookie)) {
+        res.status(200);
+        setTime(begin, res);
+        next();
+    } else {
+        res.status(403).end();
+    }
+}, function (req, res, next) {
+    var begin = new Date().getTime();
+    console.log(req.method + ", " + req.originalUrl);
+    res.set('X-Request-Url', req.method + " " + req.originalUrl);
+
+    setTime(begin, res);
+    res.end();
 });
 
-app.use(function (req, res, next) {
-    console.log(req.method + " /" + req.originalUrl);
-    res.set('X-Request-Url', req.method + " " + req.originalUrl);
-    next();
+/*app.use(function(err, req, res, next) {
+    if (err.toString().replace('/','') === 'incorrect') {
+        res.set('X-Request-Error', 'Unknown request').end();
+    }
+    res.end();
+});*/
+
+app.use(function (error, req, res, next) {
+    if (error instanceof SyntaxError) {
+        console.log(error.toString());
+    } else {
+        next();
+    }
 });
 
 app.listen(PORT, function () {
