@@ -13,23 +13,30 @@ app.listen(PORT, function () {
 });
 
 
-var translitsRu = {
-    'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Jo', 'Ж': 'Zh', 'З': 'Z',
-    'И': 'I', 'Й': 'J', 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R',
-    'С': 'S', 'Т': 'T', 'У': 'U', 'Ф': 'F', 'Х': 'H', 'Ц': 'C', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Shh',
-    'Ъ': '#', 'Ы': 'Y', 'Ь': '\'', 'Э': 'Je', 'Ю': 'Ju', 'Я': 'Ja'
-};
-
-var translitsEN = {
-    'A': 'А', 'B': 'Б', 'V': 'В', 'G': 'Г', 'D': 'Д', 'E': 'Е', 'Jo': 'Ё', 'Zh': 'Ж', 'Z': 'З',
-    'I': 'И', 'J': 'Й', 'K': 'К', 'L': 'Л', 'M': 'М', 'N': 'Н', 'O': 'О', 'P': 'П', 'R': 'Р',
-    'S': 'С', 'T': 'Т', 'U': 'У', 'F': 'Ф', 'H': 'Х', 'C': 'Ц', 'Ch': 'Ч', 'Sh': 'Ш', 'Shh': 'Щ',
-    '#': 'Ъ', 'Y': 'Ы', '\'': 'Ь', 'Je': 'Э', 'Ju': 'Ю', 'Ja': 'Я'
-};
-
 class T extends Transform {
+
+    static get translitsRu() {
+        return {
+            'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Jo', 'Ж': 'Zh', 'З': 'Z',
+            'И': 'I', 'Й': 'J', 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R',
+            'С': 'S', 'Т': 'T', 'У': 'U', 'Ф': 'F', 'Х': 'H', 'Ц': 'C', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Shh',
+            'Ъ': '#', 'Ы': 'Y', 'Ь': '\'', 'Э': 'Je', 'Ю': 'Ju', 'Я': 'Ja'
+        };
+    }
+
+    static get translitsEN() {
+        return {
+            'A': 'А', 'B': 'Б', 'V': 'В', 'G': 'Г', 'D': 'Д', 'E': 'Е', 'Jo': 'Ё', 'Zh': 'Ж', 'Z': 'З',
+            'I': 'И', 'J': 'Й', 'K': 'К', 'L': 'Л', 'M': 'М', 'N': 'Н', 'O': 'О', 'P': 'П', 'R': 'Р',
+            'S': 'С', 'T': 'Т', 'U': 'У', 'F': 'Ф', 'H': 'Х', 'C': 'Ц', 'Ch': 'Ч', 'Sh': 'Ш', 'Shh': 'Щ',
+            '#': 'Ъ', 'Y': 'Ы', '\'': 'Ь', 'Je': 'Э', 'Ju': 'Ю', 'Ja': 'Я'
+        };
+    }
+
+
     constructor(options) {
         super(options);
+        this.multi = false;
     }
 
     _transform(chunk, encoding, callback) {
@@ -37,12 +44,12 @@ class T extends Transform {
 
         let translits;
         if (isNoEnglish(str))
-            translits = translitsRu;
+            translits = T.translitsRu;
         else if (isNoRussian(str))
-            translits = translitsEN;
+            translits = T.translitsEN;
 
 
-        if(translits) {
+        if (translits) {
 
             var new_str = '';
             for (var i in str) {
@@ -53,10 +60,8 @@ class T extends Transform {
                     new_str += str[i];
                 }
             }
-        } else {
-            new_str = str;
-            // TODO передать ошибку Multi Language
         }
+
 
         this.push(new_str);
         callback();
@@ -72,19 +77,35 @@ function isNoEnglish(str) {
 
 function transformStream(streamIn, streamOut) {
     var t = new T();
-    streamIn.on('error', function(err) { throw new Error('AAAAaAAAAAAAA') });
     streamIn.pipe(t).pipe(streamOut);
+}
+
+function catchRequestURL(res, req) {
+    let req_url = req.method + " " + req.originalUrl;
+    res.setHeader('X-Request-Url', req_url);
+    console.log('X-Request-Url: ' + req_url);
+}
+
+function setRequestStartTime(req) {
+    let time = new Date;
+    req.startTime = time.getTime();
+}
+function setRequestEndTime(res, req) {
+    var duration = (new Date).getTime() - req.startTime;
+    res.setHeader('X-Time', duration);
+    console.log('X-time: ' + duration);
+}
+
+function getRequestParamsArray(req) {
+    var params = req.params[0].split('/');
+    params[0] = req.params.arr + params[0];
+    return params;
 }
 
 app.use(function (req, res, next) {
 
-    let time = new Date;
-    req.startTime = time.getTime();
-
-    let req_url = req.method + " " + req.originalUrl
-    res.setHeader('X-Request-Url', req_url);
-    console.log('X-Request-Url: ' + req_url);
-
+    setRequestStartTime(req);
+    catchRequestURL(res, req);
 
     setTimeout(() => next(), 2);
 });
@@ -97,14 +118,13 @@ app.use(function (req, res, next) {
         next();
     } else {
         res.sendStatus(403);
+        next();
     }
 
 });
 
 app.use(function (req, res, next) {
-    var duration = (new Date).getTime() - req.startTime;
-    res.setHeader('X-Time', duration);
-    console.log('X-time: ' + duration);
+    setRequestEndTime(res, req);
     next();
 });
 
@@ -119,9 +139,8 @@ app.get('/v1/', function (req, res) {
 
 });
 
-app.get('/v1/(:arr)*', function (req, res) {
-    var params = req.params[0].split('/');
-    params[0] = req.params.arr + params[0];
+app.get('/v1/(:arr)*', function (req, res, next) {
+    var params = getRequestParamsArray(req);
 
     if (params.indexOf("..") > -1) {
         next(new Error('Access to upper dir'));
@@ -133,27 +152,19 @@ app.get('/v1/(:arr)*', function (req, res) {
 
         fs.readdir(path, function (err, items) {
 
-            console.log(items)
+            console.log(items);
 
             let json_items = ['.', '..'] + items;
-            let content = {'content': json_items};
-            res.status(200).send(content);
+            res.status(200).send({'content': json_items});
         });
     } else {
-        try {
-            var stream = fs.createReadStream(path);
-            transformStream(stream, res);
-            transformStream(stream, process.stdout);
-        } catch(error) {
-            res.setHeader('X-Request-Error', error.toString());
-            res.status(503).end();
-        }
+
+        var stream = fs.createReadStream(path);
+        transformStream(stream, res);
+        transformStream(stream, process.stdout);
+
     }
 
-});
-
-app.get('/', function (req, res) {
-    next(new Error('Error'));
 });
 
 app.use(function (error, req, res, next) {
