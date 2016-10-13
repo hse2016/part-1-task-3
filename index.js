@@ -55,8 +55,7 @@ app.use(function (req, res, next) {
     if (cookies && cookies['authorize']) {
         next();
     } else {
-        res.sendStatus(403);
-        next();
+        res.sendStatus(403).end();
     }
 
 });
