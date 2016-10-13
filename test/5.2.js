@@ -49,7 +49,7 @@ describe('Check transform', () => {
             });
     });
 
-    it.skip('should return content propery', (done) => {
+    it.skip('should return content properly', (done) => {
         let file = h.rndFile(rnd.dirName);
         file.create()
             .then(() => {
