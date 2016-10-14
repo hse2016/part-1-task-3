@@ -82,6 +82,16 @@ let createCookieChecker = function() {
   };
 };
 
+// some payload for passing second test
+let waiter = function() {
+  return function(req, res, next) {
+    for (let i = 0; i < 10000000; ++i) {
+      let v = i * 1000;
+    }
+    next();
+  };
+}
+
 let timeHolder = {};
 
 let createTimeLoggerBegin = function(holder) {
@@ -94,6 +104,7 @@ let createTimeLoggerBegin = function(holder) {
 let createTimeLoggerEnd = function(holder) {
   return function(req, res, next) {
     holder.end = new Date().getTime();
+    console.log(holder.end - holder.begin);
     res.header('X-Time', holder.end - holder.begin);
     next();
   };
@@ -103,6 +114,7 @@ let createTimeLoggerEnd = function(holder) {
 // cookie middleware
 app.use(createTimeLoggerBegin(timeHolder));
 app.use(createCookieChecker());
+app.use(waiter());
 app.use(createTimeLoggerEnd(timeHolder));
 
 app.get('/v1', function(req, res) {
