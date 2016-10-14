@@ -83,7 +83,7 @@ let createCookieChecker = function() {
 };
 
 // some payload for passing second test
-let waiter = function() {
+let createPayload = function() {
   return function(req, res, next) {
     for (let i = 0; i < 10000000; ++i) {
       let v = i * 1000;
@@ -110,11 +110,20 @@ let createTimeLoggerEnd = function(holder) {
   };
 };
 
+let createHeaderLogger = function() {
+  return function(request, resolve, next) {
+    let res = request.method + ' ' + request.originalUrl;
+    resolve.header('X-Request-Url', res);
+    next();
+  };
+};
+
 
 // cookie middleware
 app.use(createTimeLoggerBegin(timeHolder));
 app.use(createCookieChecker());
-app.use(waiter());
+app.use(createPayload());
+app.use(createHeaderLogger());
 app.use(createTimeLoggerEnd(timeHolder));
 
 app.get('/v1', function(req, res) {
