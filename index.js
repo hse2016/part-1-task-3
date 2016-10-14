@@ -8,24 +8,34 @@ const PORT = process.env.PORT || 4000;
 const IMAGE_ERROR_403 = 'http://t01.deviantart.net/LGMEna-IVYL1FNjkW8pAc7oJc1s=/fit-in/150x150/filters:no_upscale():origin()/pre09/2ee3/th/pre/f/2011/162/f/b/403_error_tan___uncolored_by_foxhead128-d3io641.png';
 const MESSAGE_ERROR_403 = 'Forbidden';
 
-var sendNyaError = function(response, src, msg) {
-  response.send(
-    '<!DOCTYPE html>\n' +
+var sendPage = function(response, statusCode, msg, src) {
+  let html = '<!DOCTYPE html>\n' +
     '<html lang="en">\n' +
     '<head>\n' +
-      '<meta charset="UTF-8">\n' +
-      '<title>Error :(</title>\n' +
+    '<meta charset="UTF-8">\n' +
+    '<title>Error </title>\n' +
     '</head>\n' +
-    '<body>\n' +
-      '<img src="' + src + '"alt="">\n' +
-      '<p>' + msg + '</p>' +
-    '</body>\n' +
-    '</html>\n'
-  );
+    '<body>\n';
+
+  if (typeof msg === 'string') {
+    html += '<p>' + msg + '</p>';
+  }
+
+  if (typeof src === 'string') {
+    html += '<img src="' + src + '"alt="">\n';
+  }
+
+  html += '</body>\n' +
+    '</html>\n';
+
+  response
+    .status(statusCode)
+    .send(html)
+    .end();
 };
 
 var sendError403 = function(response) {
-  sendNyaError(response, IMAGE_ERROR_403, MESSAGE_ERROR_403);
+  sendPage(response, 403, MESSAGE_ERROR_403, IMAGE_ERROR_403);
 };
 
 var getCookie = function(request) {
@@ -45,7 +55,7 @@ var getCookie = function(request) {
 };
 
 var isAuthorized = function(cookie) {
-  return /^authorized=.*/.test(cookie);
+  return /^authorize=/.test(cookie);
 };
 
 // cookie middleware
@@ -54,15 +64,18 @@ app.use(function(request, response, next) {
 
   // if not authorized, then error
   if ((cookie === null) || (! isAuthorized(cookie))) {
-    response.status(403);
     sendError403(response);
-    response.end();
     return;
   }
 
   // authorized
   next();
 });
+
+app.get('/', function(req, res) {
+  res.status(200).end();
+});
+
 
 app.listen(PORT, function () {
     console.log(`App is listen on ${PORT}`);
