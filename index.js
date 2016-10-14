@@ -5,9 +5,12 @@ const app = express();
 
 const PORT = process.env.PORT || 4000;
 
+// some constants
 const IMAGE_ERROR_403 = 'http://t01.deviantart.net/LGMEna-IVYL1FNjkW8pAc7oJc1s=/fit-in/150x150/filters:no_upscale():origin()/pre09/2ee3/th/pre/f/2011/162/f/b/403_error_tan___uncolored_by_foxhead128-d3io641.png';
 const MESSAGE_ERROR_403 = 'Forbidden';
 
+// sends page through response. If msg is not null, then adds it.
+// If src is not null, then adds an image with that src.
 let sendPage = function(response, statusCode, msg, src) {
   let html = '<!DOCTYPE html>\n' +
     '<html lang="en">\n' +
@@ -47,7 +50,7 @@ let getCookie = function(request) {
     return null;
   }
 
-  if (request.headers.cookie === '') {
+  if ((typeof request.headers.cookie !== 'string') || (request.headers.cookie === '')) {
     return null;
   }
 
@@ -55,7 +58,12 @@ let getCookie = function(request) {
 };
 
 let isAuthorized = function(cookie) {
-  return /^authorize=/.test(cookie);
+  let regex = /^authorize=/;
+  if (regex.test(cookie)) {
+    return true;
+  }
+
+  return false;
 };
 
 // Creates cookie middleware
@@ -74,11 +82,31 @@ let createCookieChecker = function() {
   };
 };
 
-// cookie middleware
-app.use(createCookieChecker());
+let timeHolder = {};
 
-app.get('/', function(req, res) {
-  sendPage(res, 200, 'Nya :3');
+let createTimeLoggerBegin = function(holder) {
+  return function(req, res, next) {
+    holder.begin = new Date().getTime();
+    next();
+  };
+};
+
+let createTimeLoggerEnd = function(holder) {
+  return function(req, res, next) {
+    holder.end = new Date().getTime();
+    res.header('X-Time', holder.end - holder.begin);
+    next();
+  };
+};
+
+
+// cookie middleware
+app.use(createTimeLoggerBegin(timeHolder));
+app.use(createCookieChecker());
+app.use(createTimeLoggerEnd(timeHolder));
+
+app.get('/v1', function(req, res) {
+  res.send('hoi');
 });
 
 
