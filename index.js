@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 4000;
 const IMAGE_ERROR_403 = 'http://t01.deviantart.net/LGMEna-IVYL1FNjkW8pAc7oJc1s=/fit-in/150x150/filters:no_upscale():origin()/pre09/2ee3/th/pre/f/2011/162/f/b/403_error_tan___uncolored_by_foxhead128-d3io641.png';
 const MESSAGE_ERROR_403 = 'Forbidden';
 
-var sendPage = function(response, statusCode, msg, src) {
+let sendPage = function(response, statusCode, msg, src) {
   let html = '<!DOCTYPE html>\n' +
     '<html lang="en">\n' +
     '<head>\n' +
@@ -34,11 +34,11 @@ var sendPage = function(response, statusCode, msg, src) {
     .end();
 };
 
-var sendError403 = function(response) {
+let sendError403 = function(response) {
   sendPage(response, 403, MESSAGE_ERROR_403, IMAGE_ERROR_403);
 };
 
-var getCookie = function(request) {
+let getCookie = function(request) {
   if (! (request.hasOwnProperty('headers'))) {
     return null;
   }
@@ -54,26 +54,31 @@ var getCookie = function(request) {
   return request.headers.cookie;
 };
 
-var isAuthorized = function(cookie) {
+let isAuthorized = function(cookie) {
   return /^authorize=/.test(cookie);
 };
 
+// Creates cookie middleware
+let createCookieChecker = function() {
+  return function(request, response, next) {
+    let cookie = getCookie(request);
+
+    // if not authorized, then error
+    if ((cookie === null) || (! isAuthorized(cookie))) {
+      sendError403(response);
+      return;
+    }
+
+    // authorized
+    next();
+  };
+};
+
 // cookie middleware
-app.use(function(request, response, next) {
-  let cookie = getCookie(request);
-
-  // if not authorized, then error
-  if ((cookie === null) || (! isAuthorized(cookie))) {
-    sendError403(response);
-    return;
-  }
-
-  // authorized
-  next();
-});
+app.use(createCookieChecker());
 
 app.get('/', function(req, res) {
-  res.status(200).end();
+  sendPage(res, 200, 'Nya :3');
 });
 
 
@@ -83,3 +88,5 @@ app.listen(PORT, function () {
 
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
+
+// vim: foldmethod=indent foldnestmax=1
