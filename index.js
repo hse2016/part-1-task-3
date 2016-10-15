@@ -22,7 +22,11 @@ function authorize(req, res, next) {
 }
 
 function handleError(error, req, res, next){
-    res.status(403).end(error.toString()); //just for authorization error. For other errors the code may be different
+    if (!res.locals) {
+        res.locals = {};
+    }
+    res.locals.error = error;
+    res.status(403); //just for authorization error. For other errors the code may be different
     next();
 }
 
@@ -31,14 +35,22 @@ function endTimeLogging(req, res, next) {
     elapsedTime = elapsedTime[0]*1000 + (elapsedTime[1]  - elapsedTime[1] % 1000) / 1e6;
     console.log('Request handled in ' + elapsedTime + ' ms');
     res.append('X-Time', elapsedTime.toString());
-    res.status(200).end(); //TODO: to think if it should be here
     next();
+}
+
+function resolve(req, res) {
+    if (res.locals && res.locals.error) {
+        res.send(res.locals.error.toString());
+    } else {
+        res.send();
+    }
 }
 
 app.use(startTimeLogging);
 app.use(authorize);
 app.use(handleError);
 app.use(endTimeLogging);
+app.use(resolve);
 
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
