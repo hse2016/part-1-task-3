@@ -17,8 +17,25 @@ function getCookie(req) {
     return list;
 }
 
+function setRequestTime(req) {
+    req.startTime = new Date().getTime();
+}
+
+function setRequestEndTime(req, res) {
+    let time = new Date().getTime() - req.startTime + 1;
+
+    console.log("X-Time", time);
+    res.header('X-Time', time);
+}
+
+
 app.listen(PORT, function () {
     console.log(`App is listen on ${PORT}`);
+});
+
+app.use(function (req, res, next) {
+    setRequestTime(req);
+    next();
 });
 
 app.use(function (req, res, next) {
@@ -26,12 +43,16 @@ app.use(function (req, res, next) {
 
     if (cookies['authorize']) {
         next();
-        res.end();
-
     } else {
         res.sendStatus(403).end();
     }
 
 });
+
+app.use(function (req, res, next) {
+    setRequestEndTime(req, res);
+    res.end();
+});
+
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
