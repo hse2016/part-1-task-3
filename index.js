@@ -60,8 +60,19 @@ function isAuthorized(request) {
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 
 // views
-app.get('/v1/', function (req, res) {
-    res.send('Test');
+app.get(/\/v1\//, function (req, res) {
+  res.send('Test');
+});
+
+app.get(/\/.*/, function (req, res) {
+  throw new Error();
+  // res.send('Test');
+});
+
+// log error
+app.use(function (error, req, res, next) {
+  res.setHeader('X-Request-Error', "Unknown request");
+  res.status(503).end();
 });
 
 module.exports = app;
