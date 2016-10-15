@@ -25,7 +25,6 @@ app.use(function (req, res, next) {
     cookies[_[0]] = _[1];
   }
   req.cookies = cookies;
-  console.log('Got request. find cookies.', req.cookies);
   next();
 });
 
@@ -36,6 +35,13 @@ app.use(function (req, res, next) {
     return;
   }
   res.sendStatus(403);
+});
+
+// log url
+app.use(function (req, res, next) {
+  res.setHeader('X-Request-Url', req.method+' '+req.url);
+  console.log('X-Request-Url:', req.method+' '+req.url);
+  next();
 });
 
 // log time
