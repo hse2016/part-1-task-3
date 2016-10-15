@@ -29,20 +29,21 @@ class T extends Transform {
     constructor(options) {
         super(options);
         this.multi = false;
+        this.type = 'utf8';
     }
 
-    _transform(chunk, encoding, callback) {
-        var str = chunk.toString('utf8').toUpperCase();
+    setType(type) {
+        this.type = type;
+    }
 
+    translit(str) {
         let translits;
         if (isNoEnglish(str))
             translits = T.translitsRu;
         else if (isNoRussian(str))
             translits = T.translitsEN;
 
-
         if (translits) {
-
             var new_str = '';
             for (var i in str) {
                 var char = translits[str[i]];
@@ -54,8 +55,21 @@ class T extends Transform {
             }
         }
 
+        return new_str;
+    }
 
-        this.push(new_str);
+    _transform(chunk, encoding, callback) {
+
+        if (this.type == 'base64') {
+            var str = chunk.toString('base64').toUpperCase();
+            this.push(str);
+        }
+        else {
+            var str = chunk.toString('utf8').toUpperCase();
+            let new_str = this.translit(str);
+            this.push(new_str);
+        }
+
         callback();
     }
 }

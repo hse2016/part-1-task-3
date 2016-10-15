@@ -9,12 +9,20 @@ const app = express();
 
 const PORT = process.env.PORT || 4000;
 
+// Чтобы заменить транслитерационный поток, на трансформирующий в Base64
+// Необходимо к экземпляру класса T применить метод setType с параметром 'base64'
+// t.setType('base64')
+//
+// Трансформирующий base64 поток можно применить к файловой системе,
+// Для этого ноеобходимо заменить в URL '/v1/' на '/base64/'
+
 app.listen(PORT, function () {
     console.log(`App is listen on ${PORT}`);
 });
 
-function transformStream(streamIn, streamOut) {
+function transformStream(streamIn, streamOut, type = 'utf8') {
     var t = new T();
+    t.setType(type);
     streamIn.pipe(t).pipe(streamOut);
 }
 
@@ -38,6 +46,27 @@ function getRequestParamsArray(req) {
     var params = req.params[0].split('/');
     params[0] = req.params.arr + params[0];
     return params;
+}
+
+function readFileOrDir(params, res, type = 'utf8') {
+    let path = getPath(params);
+
+    if (fs.lstatSync(path).isDirectory()) {
+
+        fs.readdir(path, function (err, items) {
+
+            console.log(items);
+
+            let json_items = ['.', '..'] + items;
+            res.status(200).send({'content': json_items});
+        });
+    } else {
+
+        var stream = fs.createReadStream(path);
+        transformStream(stream, res, type);
+        transformStream(stream, process.stdout, type);
+
+    }
 }
 
 app.use(function (req, res, next) {
@@ -67,12 +96,21 @@ app.use(function (req, res, next) {
 
 
 app.get('/v1/', function (req, res) {
-    fs.readdir('./', function (err, items) {
-        let json_items = ['.', '..'] + items;
-        let content = {'content': json_items};
-        res.status(200).send(content);
-    });
+    readFileOrDir([], res);
+});
 
+app.get('/base64/', function (req, res) {
+    readFileOrDir([], res, 'base64');
+});
+
+app.get('/base64/(:arr)*', function (req, res, next) {
+    var params = getRequestParamsArray(req);
+
+    if (params.indexOf("..") > -1) {
+        next(new Error('Access to upper dir'));
+    }
+
+    readFileOrDir(params, res, 'base64');
 
 });
 
@@ -83,24 +121,7 @@ app.get('/v1/(:arr)*', function (req, res, next) {
         next(new Error('Access to upper dir'));
     }
 
-    let path = getPath(params);
-
-    if (fs.lstatSync(path).isDirectory()) {
-
-        fs.readdir(path, function (err, items) {
-
-            console.log(items);
-
-            let json_items = ['.', '..'] + items;
-            res.status(200).send({'content': json_items});
-        });
-    } else {
-
-        var stream = fs.createReadStream(path);
-        transformStream(stream, res);
-        transformStream(stream, process.stdout);
-
-    }
+    readFileOrDir(params, res);
 
 });
 
