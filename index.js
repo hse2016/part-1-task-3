@@ -28,6 +28,12 @@ function setRequestEndTime(req, res) {
     res.header('X-Time', time);
 }
 
+function logRequest(req, res) {
+    let request_url = req.method + " " + req.url;
+    console.log("X-Request-Url:", request_url);
+    res.header("X-Request-Url", request_url);
+}
+
 
 app.listen(PORT, function () {
     console.log(`App is listen on ${PORT}`);
@@ -35,6 +41,7 @@ app.listen(PORT, function () {
 
 app.use(function (req, res, next) {
     setRequestTime(req);
+    logRequest(req, res);
     next();
 });
 
