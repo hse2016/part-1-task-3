@@ -34,12 +34,13 @@ function catchRequestURL(res, req) {
 
 function setRequestStartTime(req) {
     let time = new Date;
-    req.startTime = time.getTime();
+    req.startTime = process.hrtime();
 }
 function setRequestEndTime(res, req) {
-    var duration = (new Date).getTime() - req.startTime;
-    res.setHeader('X-Time', duration);
-    console.log('X-time: ' + duration);
+    var duration = process.hrtime(req.startTime);
+    var calc_duration = (duration[1] / 1000000).toFixed(3);
+    res.setHeader('X-Time', calc_duration);
+    console.log('X-time: ' + calc_duration);
 }
 
 function getRequestParamsArray(req) {
@@ -60,12 +61,14 @@ function readFileOrDir(params, res, type = 'utf8') {
             let json_items = ['.', '..'] + items;
             res.status(200).send({'content': json_items});
         });
-    } else {
+    } else if (fs.lstatSync(path).isFile()) {
 
         var stream = fs.createReadStream(path);
         transformStream(stream, res, type);
         transformStream(stream, process.stdout, type);
 
+    } else {
+        res.sendStatus(503).end();
     }
 }
 
@@ -73,8 +76,9 @@ app.use(function (req, res, next) {
 
     setRequestStartTime(req);
     catchRequestURL(res, req);
+    next();
 
-    setTimeout(() => next(), 2);
+    // setTimeout(() => next(), 2);
 });
 
 app.use(function (req, res, next) {

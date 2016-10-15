@@ -18,11 +18,17 @@ class T extends Transform {
 
     static get translitsEN() {
         return {
-            'A': 'А', 'B': 'Б', 'V': 'В', 'G': 'Г', 'D': 'Д', 'E': 'Е', 'Jo': 'Ё', 'Zh': 'Ж', 'Z': 'З',
-            'I': 'И', 'J': 'Й', 'K': 'К', 'L': 'Л', 'M': 'М', 'N': 'Н', 'O': 'О', 'P': 'П', 'R': 'Р',
-            'S': 'С', 'T': 'Т', 'U': 'У', 'F': 'Ф', 'H': 'Х', 'C': 'Ц', 'Ch': 'Ч', 'Sh': 'Ш', 'Shh': 'Щ',
-            '#': 'Ъ', 'Y': 'Ы', '\'': 'Ь', 'Je': 'Э', 'Ju': 'Ю', 'Ja': 'Я'
+            'A' : 'А', 'B' : 'Б', 'C' : 'Ц', 'D' : 'Д', 'E' : 'Е', 'F' : 'Ф', 'G' : 'Г', 'H' : 'Х', 'I' : 'И',
+            'J' : 'Й', 'K' : 'К', 'L' : 'Л', 'M' : 'М', 'N' : 'Н', 'O' : 'О', 'P' : 'П', 'Q' : 'Я', 'R' : 'Р',
+            'S' : 'С', 'T' : 'Т', 'U' : 'У', 'V' : 'В', 'W' : 'Щ', 'X' : 'Х', 'Y' : 'Ы', 'Z' : 'З', '\'': 'Ь'
         };
+    }
+
+    static get additionalEn() {
+        return {
+            'JO' : 'Ё', 'JU' : 'Ю', 'YO' : 'Ё', 'CH' : 'Ч',
+            'YA' : 'Я', 'JE' : 'Э', 'SHH': 'Щ', 'SH' : 'Ш', 'ZH' : 'Ж'
+        }
     }
 
 
@@ -30,6 +36,8 @@ class T extends Transform {
         super(options);
         this.multi = false;
         this.type = 'utf8';
+        this.defined = false;
+        this.translits = undefined;
     }
 
     setType(type) {
@@ -37,16 +45,29 @@ class T extends Transform {
     }
 
     translit(str) {
-        let translits;
-        if (isNoEnglish(str))
-            translits = T.translitsRu;
-        else if (isNoRussian(str))
-            translits = T.translitsEN;
 
-        if (translits) {
+        if(!this.defined) {
+            let not_rus = isNoRussian(str);
+            let not_en = isNoEnglish(str);
+
+            if (not_en && !not_rus || !not_en && !not_rus && englishIndex(str) > russianIndex(str)) {
+                this.translits = T.translitsRu;
+                this.defined = true;
+            }
+            else if (not_rus && !not_en || !not_en && !not_rus && englishIndex(str) < russianIndex(str)) {
+                this.translits = T.translitsEN;
+                this.defined = true;
+
+                for(let i in T.additionalEn) {
+                    str = str.split(i).join(T.additionalEn[i]);
+                }
+            }
+        }
+
+        if (this.translits) {
             var new_str = '';
             for (var i in str) {
-                var char = translits[str[i]];
+                var char = this.translits[str[i]];
                 if (char) {
                     new_str += char;
                 } else {
@@ -80,6 +101,15 @@ function isNoRussian(str) {
 function isNoEnglish(str) {
     return (/[A-Z]/gi.test(str) ? false : true);
 }
+function englishIndex(str) {
+    var res = /[A-Z]/gi.exec(str);
+    return res.index;
+}
+function russianIndex(str) {
+    var res = /[А-Я-Ё]/gi.exec(str);
+    return res.index;
+}
+
 
 module.exports = T; // TODO: kek
 
