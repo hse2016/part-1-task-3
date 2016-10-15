@@ -6,7 +6,7 @@
   const fs = require('fs');
 
   // custom import
-  const TransformStream = require('./transformStream').TransformStream;
+  const TransformStream = require('./transformStream');
 
   const app = express();
 
@@ -89,9 +89,12 @@
         res.send(context);
       });
     } else {
-      let stream = fs.createReadStream(path);
-      console.log(1);
-      new TransformStream(stream, res);
+      let stream = fs.createReadStream(path),
+          tstream = new TransformStream();
+
+      stream.pipe(tstream).pipe(res);
+
+      stream.on('error', function(err) {res.end(err);});
     }
   });
 
