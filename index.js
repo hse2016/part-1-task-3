@@ -9,6 +9,12 @@ app.listen(PORT, function () {
   console.log(`App is listen on ${PORT}`);
 });
 
+// log request time
+app.use(function(req, res, next) {
+  req.requestTime = new Date().getTime();
+  next();
+});
+
 // add cookies
 app.use(function (req, res, next) {
   let cookiesString = (req.headers.cookie) ? req.headers.cookie : "",
@@ -30,6 +36,15 @@ app.use(function (req, res, next) {
     return;
   }
   res.sendStatus(403);
+});
+
+// log time
+app.use(function (req, res, next) {
+  let date = new Date();
+  let time = date.getTime() - req.requestTime + 1;
+  res.setHeader('X-Time', time);
+  console.log('X-Time=' + time);
+  next();
 });
 
 function isAuthorized(request) {
