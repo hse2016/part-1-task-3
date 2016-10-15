@@ -24,14 +24,14 @@ function setRequestTime(req) {
 function setRequestEndTime(req, res) {
     let time = new Date().getTime() - req.startTime + 1;
 
-    console.log("X-Time", time);
+    console.log('X-Time', time);
     res.header('X-Time', time);
 }
 
 function logRequest(req, res) {
     let request_url = req.method + " " + req.url;
-    console.log("X-Request-Url:", request_url);
-    res.header("X-Request-Url", request_url);
+    console.log('X-Request-Url:', request_url);
+    res.header('X-Request-Url', request_url);
 }
 
 
@@ -58,8 +58,22 @@ app.use(function (req, res, next) {
 
 app.use(function (req, res, next) {
     setRequestEndTime(req, res);
-    res.end();
+    next();
 });
+
+app.use(function (err, req, res, next) {
+    console.error(err.toString());
+    res.header('X-Request-Error', err.toString());
+    res.sendStatus(503).end();
+});
+
+app.use(function (req, res, next) {
+    console.error('Unknown request')
+    res.setHeader('X-Request-Error', 'Unknown request');
+    res.sendStatus(503).end();
+});
+
+
 
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
