@@ -1,8 +1,13 @@
 ;(function() {
   "use strict";
 
+  // import
   const express = require('express');
   const fs = require('fs');
+
+  // custom import
+  const TransformStream = require('./transformStream').TransformStream;
+
   const app = express();
 
   const PORT = process.env.PORT || 4000;
@@ -71,17 +76,23 @@
     }
     console.log('args', args);
     let path = './' + args;
-    fs.readdir(path, function (err, items) {
-      if (err) {
-        throw new Error();
-      }
-      items.push('.');
-      items.push('..');
-      let context = {
-        content: items,
-      };
-      res.send(context);
-    });
+    if (fs.lstatSync(path).isDirectory()) { // is dir
+      fs.readdir(path, function (err, items) {
+        if (err) {
+          throw new Error();
+        }
+        items.push('.');
+        items.push('..');
+        let context = {
+          content: items,
+        };
+        res.send(context);
+      });
+    } else {
+      let stream = fs.createReadStream(path);
+      console.log(1);
+      new TransformStream(stream, res);
+    }
   });
 
   app.get(/\/.*/, function (req, res) {
