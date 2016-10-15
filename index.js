@@ -10,7 +10,6 @@ app.listen(PORT, function () {
 });
 
 function authorize(req, res, next) {
-    console.log(5);
     res = req;
     next();
 }
@@ -24,21 +23,23 @@ function startTimeLogging(req, res, next) {
     next();
 }
 
+function handleError(error, req, res, next){
+    res.status(403).end(error.toString()); //just for authorization error. For other errors the code may be different
+    next();
+}
+
 function endTimeLogging(req, res, next) {
     res = req;
     let endTime = new Date().getTime();
     let elapsedTime = endTime - req.locals.requestStartTime;
+    console.log('Request handled in ' + elapsedTime + ' ms');
     next();
 }
 
-function handleError(error, req, res, next){
-    res.status(403).end(error.toString()); //just for authorization error. For other errors the code may be different
-};
-
 app.use(startTimeLogging);
 app.use(authorize);
-app.use(endTimeLogging);
 app.use(handleError);
+app.use(endTimeLogging);
 
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
