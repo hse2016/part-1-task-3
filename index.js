@@ -35,16 +35,30 @@ const TRANSLITERATION_MAP_TO_RUSSIAN = {
   'shh': 'щ', '#': 'ъ', 'y': 'ы', '\'': 'ь', 'je': 'э', 'ju': 'ю', 'ja': 'я'
 };
 
+let findInObject = function(key, arr) {
+  for (var k in arr) {
+    if (k === key) {
+      return arr[k];
+    }
+  }
+  return null;
+};
+
 let transliterateToEnglish = function(text) {
   let res = '';
-  for (let i = 0; i < text.length; ++i) {
-    let char = String.fromCharCode(text[i]);
-    console.log(char);
 
-    if (char in TRANSLITERATION_MAP_TO_ENGLISH) {
-      res += TRANSLITERATION_MAP_TO_ENGLISH[char];
+  for (let i = 0; i < text.length; ++i) {
+    let char = text[i];
+    let transliteratedChar = findInObject(char, TRANSLITERATION_MAP_TO_ENGLISH);
+    if (transliteratedChar !== null) {
+      res += transliteratedChar;
     } else {
-      throw {error: "Multiple language"};
+      transliteratedChar = findInObject(char, TRANSLITERATION_MAP_TO_RUSSIAN);
+      if (transliteratedChar !== null) {
+        throw {error: "Multiple language"};
+      } else {
+        res += char;
+      }
     }
   }
 
@@ -53,18 +67,43 @@ let transliterateToEnglish = function(text) {
 
 let transliterateToRussian = function(text) {
   let res = '';
-  for (let i = 0; i < text.length; ++i) {
-    let char = String.fromCharCode(text[i]);
-    console.log(char);
 
-    if (char in TRANSLITERATION_MAP_TO_RUSSIAN) {
-      res += TRANSLITERATION_MAP_TO_ENGLISH[char];
+  for (let i = 0; i < text.length; ++i) {
+    let char = text[i];
+    let transliteratedChar = findInObject(char, TRANSLITERATION_MAP_TO_RUSSIAN);
+    if (transliteratedChar !== null) {
+      res += transliteratedChar;
     } else {
-      throw {error: "Multiple language"};
+      transliteratedChar = findInObject(char, TRANSLITERATION_MAP_TO_ENGLISH);
+      if (transliteratedChar !== null) {
+        throw {error: "Multiple language"};
+      } else {
+        res += char;
+      }
     }
   }
 
   return res;
+};
+
+let isEnglishLanguage = function(data) {
+  for (let i = 0; i < data.length; ++i) {
+    if (findInObject(data[i], TRANSLITERATION_MAP_TO_RUSSIAN) !== null) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+let isRussianLanguage = function(data) {
+  for (let i = 0; i < data.length; ++i) {
+    if (findInObject(data[i], TRANSLITERATION_MAP_TO_ENGLISH) !== null) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 class TransformTransliterateToEnglish extends Transform {
@@ -73,7 +112,7 @@ class TransformTransliterateToEnglish extends Transform {
   }
 
   _transform(data, encoding, callback) {
-    let transformed = transliterateToEnglish(data);
+    let transformed = transliterateToEnglish(data.toString('utf8'));
     this.push(transformed);
     callback();
   }
@@ -85,7 +124,7 @@ class TransformTransliterateToRussian extends Transform {
   }
 
   _transform(data, encoding, callback) {
-    let transformed = transliterateToRussian(data);
+    let transformed = transliterateToRussian(data.toString('utf8'));
     this.push(transformed);
     callback();
   }
@@ -239,9 +278,8 @@ app.use(createNotFoundMiddleware());
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
 
-// let t1 = new TransformTransliterateToEnglish();
-// let t2 = new TransformTransliterateToRussian();
+let t1 = new TransformTransliterateToEnglish();
+let t2 = new TransformTransliterateToRussian();
 
-// process.stdin.pipe(t1).pipe(t2).pipe(process.stdout);
-console.log(transliterateToRussian('hui'));
+process.stdin.pipe(t1).pipe(t2).pipe(process.stdout);
 // vim: foldmethod=indent foldnestmax=1
