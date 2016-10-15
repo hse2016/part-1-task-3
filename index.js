@@ -23,5 +23,24 @@ app.use(function (req, res, next) {
   next();
 });
 
+// check authorized
+app.use(function (req, res, next) {
+  if (isAuthorized(req)) {
+    next();
+    return;
+  }
+  res.sendStatus(403);
+});
+
+function isAuthorized(request) {
+  return !!(request && request.cookies && request.cookies.authorize);
+}
+
 // IMPORTANT. Это строка должна возвращать инстанс сервера
+
+// views
+app.get('/v1/', function (req, res) {
+    res.send('Test');
+});
+
 module.exports = app;
