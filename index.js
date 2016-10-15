@@ -119,24 +119,23 @@ module.exports = app;
 
 
 function getPath(route) {
-    var path = ''
+    var path = '';
     route.forEach(function (i) {
         path += '/' + i;
     });
     return '.' + path;
 }
 
+
 function getCookies(cookies) {
 
     if (!cookies)
         return;
 
-    cookies = cookies.split(';');
-    var js_cookies = []
-    cookies.forEach(function (i) {
-        i = i.trim();
+    var js_cookies = [];
 
-        var splited = i.split('=');
+    cookies.split(';').forEach(function (i) {
+        var splited = i.trim().split('=');
         js_cookies[splited[0]] = splited[1];
     });
 
