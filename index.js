@@ -11,6 +11,9 @@ const PORT = process.env.PORT || 4000;
 const IMAGE_ERROR_403 = 'http://t01.deviantart.net/LGMEna-IVYL1FNjkW8pAc7oJc1s=/fit-in/150x150/filters:no_upscale():origin()/pre09/2ee3/th/pre/f/2011/162/f/b/403_error_tan___uncolored_by_foxhead128-d3io641.png';
 const MESSAGE_ERROR_403 = 'Forbidden';
 
+const STATE_OK = 0;
+const STATE_MULTIPLE_LANGUAGE = 1;
+
 const TRANSLITERATION_MAP_TO_ENGLISH = {
   'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Jo', 'Ж': 'Zh',
   'З': 'Z', 'И': 'I', 'Й': 'J', 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O',
@@ -36,7 +39,7 @@ const TRANSLITERATION_MAP_TO_RUSSIAN = {
 };
 
 let findInObject = function(key, arr) {
-  for (var k in arr) {
+  for (let k in arr) {
     if (k === key) {
       return arr[k];
     }
@@ -55,7 +58,7 @@ let transliterateToEnglish = function(text) {
     } else {
       transliteratedChar = findInObject(char, TRANSLITERATION_MAP_TO_RUSSIAN);
       if (transliteratedChar !== null) {
-        throw {error: "Multiple language"};
+        return null;
       } else {
         res += char;
       }
@@ -76,7 +79,7 @@ let transliterateToRussian = function(text) {
     } else {
       transliteratedChar = findInObject(char, TRANSLITERATION_MAP_TO_ENGLISH);
       if (transliteratedChar !== null) {
-        throw {error: "Multiple language"};
+        return null;
       } else {
         res += char;
       }
@@ -109,24 +112,50 @@ let isRussianLanguage = function(data) {
 class TransformTransliterateToEnglish extends Transform {
   constructor(options) {
     super(options);
+    this.__state = STATE_OK;
   }
 
   _transform(data, encoding, callback) {
     let transformed = transliterateToEnglish(data.toString('utf8'));
-    this.push(transformed);
+
+    if (transformed === null) {
+      this.__state = STATE_MULTIPLE_LANGUAGE;
+    }
+
+    if (this.__state === STATE_OK) {
+      this.push(transformed);
+    }
+
     callback();
+  }
+
+  isOK() {
+    return this.__state === STATE_OK;
   }
 }
 
 class TransformTransliterateToRussian extends Transform {
   constructor(options) {
     super(options);
+    this.__state = STATE_OK;
   }
 
   _transform(data, encoding, callback) {
     let transformed = transliterateToRussian(data.toString('utf8'));
-    this.push(transformed);
+
+    if (transformed === null) {
+      this.__state = STATE_MULTIPLE_LANGUAGE;
+    }
+
+    if (this.__state === STATE_OK) {
+      this.push(transformed);
+    }
+
     callback();
+  }
+
+  isOK() {
+    return this.__state === STATE_OK;
   }
 }
 
@@ -225,7 +254,6 @@ let createTimeLoggerBegin = function(holder) {
 let createTimeLoggerEnd = function(holder) {
   return function(req, res, next) {
     holder.end = new Date().getTime();
-    console.log(holder.end - holder.begin);
     res.header('X-Time', holder.end - holder.begin);
     next();
   };
@@ -251,35 +279,76 @@ let createErrorMiddleware = function() {
   return function(err, request, resolve, next) {
     console.error(err);
     resolve.status(503).header('x-request-error', err).end();
+    next();
+  };
+};
+
+let createFileSeekerMiddleware = function() {
+  return function(req, res, next) {
+    let originalUrl = req.originalUrl;
+    let path = __dirname + originalUrl;
+    fs.stat(path, function(err, stats) {
+      if (err) {
+        return next();
+      }
+
+      if (stats.isFile()) {
+        let fileStream = fs.createReadStream(path);
+
+        // let transliterateToRussianStream = new TransformTransliterateToRussian();
+        // let transliterateToEnglishStream = new TransformTransliterateToEnglish();
+
+        // fileStream.pipe(transliterateToRussian);
+        // fileStream.pipe(transliterateToEnglish);
+
+        // if (transliterateToRussianStream.isOK()) {
+        //   transliterateToRussianStream.pipe(res);
+        // } else if(transliterateToEnglishStream.isOK()) {
+        //   transliterateToEnglishStream.pipe(res);
+        // } else {
+        //   throw {error: "Multiple language"};
+        // }
+
+        fileStream.pipe(res);
+
+      } else if (stats.isDirectory()) {
+        fs.readdir(path, function(err, files) {
+          if (err) {
+            next();
+          }
+
+          res.end("[" + files.join(", ") + "]");
+        });
+      }
+    });
   };
 };
 
 
 // middlewares
 app.use(createTimeLoggerBegin(timeHolder));
-app.use(createCookieChecker());
+// app.use(createCookieChecker());
 app.use(createPayload());
 app.use(createHeaderLogger());
 app.use(createTimeLoggerEnd(timeHolder));
-
 app.use(createErrorMiddleware());
 
 app.get('/v1', function(req, res) {
   res.send('hoi');
 });
 
-// handler not found errors
-app.use(createNotFoundMiddleware());
+app.use('/', createFileSeekerMiddleware());
+app.use('/', createNotFoundMiddleware());
 
-// app.listen(PORT, function () {
-//     console.log(`App is listen on ${PORT}`);
-// });
+app.listen(PORT, function () {
+    console.log(`App is listen on ${PORT}`);
+});
 
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
 
-let t1 = new TransformTransliterateToEnglish();
-let t2 = new TransformTransliterateToRussian();
+// let t1 = new TransformTransliterateToEnglish();
+// let t2 = new TransformTransliterateToRussian();
 
-process.stdin.pipe(t1).pipe(t2).pipe(process.stdout);
+// process.stdin.pipe(t1).pipe(t2).pipe(process.stdout);
 // vim: foldmethod=indent foldnestmax=1
