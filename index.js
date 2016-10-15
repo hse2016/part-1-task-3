@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('fs');
+const Transform = require('stream').Transform;
 const express = require('express');
 const app = express();
 
@@ -8,6 +10,86 @@ const PORT = process.env.PORT || 4000;
 // some constants
 const IMAGE_ERROR_403 = 'http://t01.deviantart.net/LGMEna-IVYL1FNjkW8pAc7oJc1s=/fit-in/150x150/filters:no_upscale():origin()/pre09/2ee3/th/pre/f/2011/162/f/b/403_error_tan___uncolored_by_foxhead128-d3io641.png';
 const MESSAGE_ERROR_403 = 'Forbidden';
+
+const TRANSLITERATION_MAP_TO_ENGLISH = {
+  'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Jo', 'Ж': 'Zh',
+  'З': 'Z', 'И': 'I', 'Й': 'J', 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O',
+  'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U', 'Ф': 'F', 'Х': 'H', 'Ц': 'C',
+  'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Shh', 'Ъ': '#', 'Ы': 'Y', 'Ь': '\'', 'Э': 'Je',
+  'Ю': 'Ju', 'Я': 'Ja','а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e',
+  'ё': 'jo', 'ж': 'zh','з': 'z', 'и': 'i', 'й': 'j', 'к': 'k', 'л': 'l', 'м': 'm',
+  'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f',
+  'х': 'h', 'ц': 'c', 'ч': 'ch', 'ш': 'sh', 'щ': 'shh', 'ъ': '#', 'ы': 'y',
+  'ь': '\'', 'э': 'je', 'ю': 'ju', 'я': 'ja'
+};
+
+const TRANSLITERATION_MAP_TO_RUSSIAN = {
+  'A': 'А', 'B': 'Б', 'V': 'В', 'G': 'Г', 'D': 'Д', 'E': 'Е', 'Jo': 'Ё', 'Zh': 'Ж',
+  'Z': 'З', 'I': 'И', 'J': 'Й', 'K': 'К', 'L': 'Л', 'M': 'М', 'N': 'Н', 'O': 'О',
+  'P': 'П', 'R': 'Р', 'S': 'С', 'T': 'Т', 'U': 'У', 'F': 'Ф', 'H': 'Х', 'C': 'Ц',
+  'Ch': 'Ч', 'Sh': 'Ш', 'Shh': 'Щ', 'Y': 'Ы', 'Je': 'Э',
+  'Ju': 'Ю', 'Ja': 'Я', 'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д',
+  'e': 'е', 'jo': 'ё', 'zh': 'ж', 'z': 'з', 'i': 'и', 'j': 'й', 'k': 'к',
+  'l': 'л', 'm': 'м', 'n': 'н', 'o': 'о', 'p': 'п', 'r': 'р', 's': 'с',
+  't': 'т', 'u': 'у', 'f': 'ф', 'h': 'х', 'c': 'ц', 'ch': 'ч', 'sh': 'ш',
+  'shh': 'щ', '#': 'ъ', 'y': 'ы', '\'': 'ь', 'je': 'э', 'ju': 'ю', 'ja': 'я'
+};
+
+let transliterateToEnglish = function(text) {
+  let res = '';
+  for (let i = 0; i < text.length; ++i) {
+    let char = String.fromCharCode(text[i]);
+    console.log(char);
+
+    if (char in TRANSLITERATION_MAP_TO_ENGLISH) {
+      res += TRANSLITERATION_MAP_TO_ENGLISH[char];
+    } else {
+      throw {error: "Multiple language"};
+    }
+  }
+
+  return res;
+};
+
+let transliterateToRussian = function(text) {
+  let res = '';
+  for (let i = 0; i < text.length; ++i) {
+    let char = String.fromCharCode(text[i]);
+    console.log(char);
+
+    if (char in TRANSLITERATION_MAP_TO_RUSSIAN) {
+      res += TRANSLITERATION_MAP_TO_ENGLISH[char];
+    } else {
+      throw {error: "Multiple language"};
+    }
+  }
+
+  return res;
+};
+
+class TransformTransliterateToEnglish extends Transform {
+  constructor(options) {
+    super(options);
+  }
+
+  _transform(data, encoding, callback) {
+    let transformed = transliterateToEnglish(data);
+    this.push(transformed);
+    callback();
+  }
+}
+
+class TransformTransliterateToRussian extends Transform {
+  constructor(options) {
+    super(options);
+  }
+
+  _transform(data, encoding, callback) {
+    let transformed = transliterateToRussian(data);
+    this.push(transformed);
+    callback();
+  }
+}
 
 // sends page through response. If msg is not null, then adds it.
 // If src is not null, then adds an image with that src.
@@ -90,7 +172,7 @@ let createPayload = function() {
     }
     next();
   };
-}
+};
 
 let timeHolder = {};
 
@@ -113,29 +195,53 @@ let createTimeLoggerEnd = function(holder) {
 let createHeaderLogger = function() {
   return function(request, resolve, next) {
     let res = request.method + ' ' + request.originalUrl;
+    console.log(res);
     resolve.header('X-Request-Url', res);
     next();
   };
 };
 
+let createNotFoundMiddleware = function() {
+  return function(request, resolve, next) {
+    console.error("Unknown request");
+    resolve.status(503).header('x-request-error', "Unknown request").end();
+  };
+};
 
-// cookie middleware
+let createErrorMiddleware = function() {
+  return function(err, request, resolve, next) {
+    console.error(err);
+    resolve.status(503).header('x-request-error', err).end();
+  };
+};
+
+
+// middlewares
 app.use(createTimeLoggerBegin(timeHolder));
 app.use(createCookieChecker());
 app.use(createPayload());
 app.use(createHeaderLogger());
 app.use(createTimeLoggerEnd(timeHolder));
 
+app.use(createErrorMiddleware());
+
 app.get('/v1', function(req, res) {
   res.send('hoi');
 });
 
+// handler not found errors
+app.use(createNotFoundMiddleware());
 
-app.listen(PORT, function () {
-    console.log(`App is listen on ${PORT}`);
-});
+// app.listen(PORT, function () {
+//     console.log(`App is listen on ${PORT}`);
+// });
 
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
 
+// let t1 = new TransformTransliterateToEnglish();
+// let t2 = new TransformTransliterateToRussian();
+
+// process.stdin.pipe(t1).pipe(t2).pipe(process.stdout);
+console.log(transliterateToRussian('hui'));
 // vim: foldmethod=indent foldnestmax=1
