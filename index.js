@@ -3,30 +3,35 @@
 const express = require('express');
 const app = express();
 const Transform = require('stream').Transform;
+const fs = require('fs');
+const path = require('path');
 
-const rus = {'А' : 'A', 'Б' : 'B', 'В' : 'V', 'Г' : 'G', 'Д' : 'D', 'Е' : 'E', 'Ё' : 'Jo',
-             'Ж' : 'Zh', 'З' : 'Z', 'И' : 'I', 'Й' : 'J', 'К' : 'K', 'Л' : 'L', 'М' : 'M',
-             'Н' : 'N', 'О' : 'O', 'П' : 'P', 'Р' : 'R', 'С' : 'S', 'Т' : 'T', 'У' : 'U',
-             'Ф' : 'F', 'Х' : 'H', 'Ц' : 'C', 'Ч' : 'Ch', 'Ш' : 'Sh', 'Щ' : 'Ssh',
-             'Ъ' : '#', 'Ы' : 'Y', 'Ь' : '\'', 'Э' : 'Je', 'Ю' : 'Ju', 'Я' : 'Ja'};
+const rus = {
+    'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Jo',
+    'Ж': 'Zh', 'З': 'Z', 'И': 'I', 'Й': 'J', 'К': 'K', 'Л': 'L', 'М': 'M',
+    'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U',
+    'Ф': 'F', 'Х': 'H', 'Ц': 'C', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Ssh',
+    'Ъ': '#', 'Ы': 'Y', 'Ь': '\'', 'Э': 'Je', 'Ю': 'Ju', 'Я': 'Ja'
+};
 
 (function () {
-    for(let key in rus) {
+    for (let key in rus) {
         rus[key.toLowerCase()] = rus[key].toLowerCase();
     }
 })();
 
-const en = {'A' : 'А', 'B' : 'Б', 'C' : 'Ц', 'D' : 'Д', 'E' : 'Е', 'F' : 'Ф',
-            'G' : 'Г', 'H' : 'Х', 'I' : 'И', 'J' : 'Й', 'K' : 'К', 'L' : 'Л',
-            'M' : 'М', 'N' : 'Н', 'O' : 'О', 'P' : 'П', 'Q' : 'Я', 'R' : 'Р',
-            'S' : 'С', 'T' : 'Т', 'U' : 'У', 'V' : 'В', 'W' : 'Щ', 'X' : 'Х',
-            'Y' : 'Ы', 'Z' : 'З'};
+const en = {
+    'A': 'А', 'B': 'Б', 'C': 'Ц', 'D': 'Д', 'E': 'Е', 'F': 'Ф',
+    'G': 'Г', 'H': 'Х', 'I': 'И', 'J': 'Й', 'K': 'К', 'L': 'Л',
+    'M': 'М', 'N': 'Н', 'O': 'О', 'P': 'П', 'Q': 'Я', 'R': 'Р',
+    'S': 'С', 'T': 'Т', 'U': 'У', 'V': 'В', 'W': 'Щ', 'X': 'Х',
+    'Y': 'Ы', 'Z': 'З'
+};
 
 (function () {
-    for(let key in en) {
+    for (let key in en) {
         en[key.toLowerCase()] = en[key].toLowerCase();
     }
-
 })();
 
 class Translitartor extends Transform {
@@ -42,7 +47,7 @@ class Translitartor extends Transform {
     _transform(chunk, encoding, callback) {
         let str = chunk.toString('utf-8');
         let formatted = '';
-        for(let i = 0; i < str.length; i ++) {
+        for (let i = 0; i < str.length; i++) {
             if (str[i] in this.dictionary) {
                 formatted += this.dictionary[str[i]];
             } else {
@@ -54,12 +59,6 @@ class Translitartor extends Transform {
     }
 }
 
-
-var t = new Translitartor(null, 'en');
-
-process.stdin.pipe(t).pipe(process.stdout);
-
-/*
 const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, function () {
@@ -89,7 +88,7 @@ app.use(function (req, res, next) {
     if (req.headers.cookie) {
         array = req.headers.cookie.replace('; ', ';').split(';');
     }
-    for (let i = 0; i < array.length; i ++) {
+    for (let i = 0; i < array.length; i++) {
         let cookie = array[i].split('=');
         req.cookies[cookie[0]] = cookie[1];
     }
@@ -100,8 +99,8 @@ app.use(function (req, res, next) {
 app.use(function (req, res, next) {
     if (!req.cookies.authorize) {
         throw {
-            status : 403,
-            message : 'User unauthorized'
+            status: 403,
+            message: 'User unauthorized'
         };
     }
     next();
@@ -109,8 +108,8 @@ app.use(function (req, res, next) {
 
 app.get('/', function (req, res, next) {
     throw {
-        status : 503,
-        message : 'Unknown request'
+        status: 503,
+        message: 'Unknown request'
     }
 });
 
@@ -127,13 +126,29 @@ app.use(function (req, res, next) {
 
 //-----------Routes-----------------
 
-app.get('/v1/', function (req, res) {
-    res.sendStatus(200);
+app.get('/v1/*', function (req, res) {
+    let rawurl = __dirname + req.url.replace('/v1', '');
+    let url = path.normalize(rawurl);
+    if (url.indexOf(__dirname) === -1) {
+        throw {
+            status : 400,
+            message : 'Wrong path'
+        }
+    }
+    if (fs.lstatSync(url).isDirectory()) {
+        fs.readdir(url, function (err, files) {
+            if (err) throw err;
+            let result = ['.', '..'];
+            res.status(200).send({content : result.concat(files)});
+        });
+    } else {
+        res.sendStatus(200);
+    }
 });
 
 //-----------Error Handler----------
 
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
     if (err) {
         console.error(err);
         res.set('X-Request-Error', err.message);
@@ -141,10 +156,10 @@ app.use(function(err, req, res, next) {
     }
 });
 
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
     let err = {
-        status : 404,
-        message : 'Unknown request'
+        status: 404,
+        message: 'Unknown request'
     };
     console.error(err);
     res.set('X-Request-Error', err.message);
@@ -152,4 +167,4 @@ app.use(function(req, res, next) {
 });
 
 // IMPORTANT. Это строка должна возвращать инстанс сервера
-module.exports = app; */
+module.exports = app;
