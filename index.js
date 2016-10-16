@@ -199,9 +199,9 @@ class MyTransform extends Transform {
 
 
 
-const rq = require('supertest');
-rq(app)
-    .get('/v1/files/file.en.txt')
-    .set('Cookie', ['authorize=12345667'])
-    .expect(200)
-    .end((err,res) => {});
+// const rq = require('supertest');
+// rq(app)
+//     .get('/v1/files/file.multi.txt')
+//     .set('Cookie', ['authorize=12345667'])
+//     .expect(200)
+//     .end((err,res) => {});
