@@ -286,7 +286,9 @@ let createErrorMiddleware = function() {
 let createFileSeekerMiddleware = function() {
   return function(req, res, next) {
     let originalUrl = req.originalUrl;
-    let path = __dirname + originalUrl;
+    // kostil
+    let path = __dirname + "/files" + originalUrl.substr(3);
+    console.log(path);
     fs.stat(path, function(err, stats) {
       if (err) {
         return next();
@@ -295,21 +297,30 @@ let createFileSeekerMiddleware = function() {
       if (stats.isFile()) {
         let fileStream = fs.createReadStream(path);
 
-        // let transliterateToRussianStream = new TransformTransliterateToRussian();
-        // let transliterateToEnglishStream = new TransformTransliterateToEnglish();
+        let russianData = "";
+        let englishData = "";
 
-        // fileStream.pipe(transliterateToRussian);
-        // fileStream.pipe(transliterateToEnglish);
+        let transliterateToRussianStream = new TransformTransliterateToRussian();
+        transliterateToRussianStream.on('data', (chunk) => {
+          russianData += chunk.toString('utf-8');
+        });
+        transliterateToRussianStream.on('end', (chunk) => {
+          if (transliterateToRussianStream.isOK()) {
+            res.send(russianData);
+          }
+        });
+        let transliterateToEnglishStream = new TransformTransliterateToEnglish();
+        transliterateToEnglishStream.on('data', (chunk) => {
+          englishData += chunk.toString('utf-8');
+        });
+        transliterateToEnglishStream.on('end', (chunk) => {
+          if (transliterateToEnglishStream.isOK()) {
+            res.send(englishData);
+          }
+        });
 
-        // if (transliterateToRussianStream.isOK()) {
-        //   transliterateToRussianStream.pipe(res);
-        // } else if(transliterateToEnglishStream.isOK()) {
-        //   transliterateToEnglishStream.pipe(res);
-        // } else {
-        //   throw {error: "Multiple language"};
-        // }
-
-        fileStream.pipe(res);
+        fileStream.pipe(transliterateToRussianStream);
+        fileStream.pipe(transliterateToEnglishStream);
 
       } else if (stats.isDirectory()) {
         fs.readdir(path, function(err, files) {
@@ -319,6 +330,8 @@ let createFileSeekerMiddleware = function() {
 
           res.end("[" + files.join(", ") + "]");
         });
+      } else {
+        return next();
       }
     });
   };
@@ -337,7 +350,7 @@ app.get('/v1', function(req, res) {
   res.send('hoi');
 });
 
-app.use('/', createFileSeekerMiddleware());
+app.use('/v1', createFileSeekerMiddleware());
 app.use('/', createNotFoundMiddleware());
 
 app.listen(PORT, function () {
