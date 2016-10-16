@@ -138,11 +138,13 @@ const engToRus_upper = {
 };
 
 const engToRus_lower = {
-    'a': 'А', 'b': 'Б', 'c': 'Ц', 'd': 'Д', 'e': 'Е', 'f': 'Ф', 'g': 'Г', 'h': 'Х', 'i': 'И',
-    'j': 'Й', 'k': 'К', 'l': 'Л', 'm': 'М', 'n': 'Н', 'o': 'О', 'P': 'П', 'Q': 'Я', 'R': 'Р',
-    'S': 'С', 'T': 'Т', 'U': 'У', 'V': 'В', 'W': 'Щ', 'X': 'Х', 'Y': 'Ы', 'Z': 'З', '\'': 'Ь'
-    'JO': 'Ё', 'JU': 'Ю', 'YO': 'Ё', 'CH': 'Ч',
-    'YA': 'Я', 'JE': 'Э', 'SHH': 'Щ', 'SH': 'Ш', 'ZH': 'Ж'
+    'a': 'a', 'b': 'б', 'c': 'ц', 'd': 'д', 'e': 'е', 'f': 'ф', 'g': 'г', 'h': 'х', 'i': 'и',
+    'j': 'й', 'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н', 'o': 'о', 'p': 'п', 'q': 'я', 'r': 'р',
+    's': 'с', 't': 'т', 'u': 'у', 'v': 'в', 'w': 'щ', 'x': 'х', 'y': 'ы', 'z': 'з', '\'': 'ь',
+    'jo': 'ё', 'ju': 'ю', 'yo': 'ё', 'ch': 'ч',
+    'ya': 'я', 'je': 'э', 'shh': 'щ', 'sh': 'ш', 'zh': 'ж',
+    'Jo': 'Ё', 'Ju': 'Ю', 'Yo': 'Ё', 'Ch': 'Ч',
+    'Ya': 'Я', 'Je': 'Э', 'Shh': 'Щ', 'Sh': 'Ш', 'Zh': 'Ж'
 };
 
 class MyTransform extends Transform {
@@ -161,50 +163,24 @@ class MyTransform extends Transform {
         console.log(str);
         if (this.detected === true){
             if (this.isToRus) {
-                str = this.translateEnglish(str);
+                str = this.translate(str, engToRus_lower, engToRus_upper);
             }
             else {
-                str = this.translate(str, rusToEng);
+                str = this.translate(str, rusToEng_lower, rusToEng_upper);
             }
         }
         this.push(str);
         callback();
     }
 
-    translate(str, map) {
-        let res = '';
-        str = str;
-        for (let i = 0; i < str.length; i++){
-            let inUpper = false;
-
-            if (str.charAt(i).toUpperCase() === str.charAt(i)){
-                inUpper = true;
-            }
-            let char = str.charAt(i).toUpperCase();
-            let c = map[char];
-
-            let resChar = '';
-            if (c === undefined)
-                resChar += char;
-            else
-                resChar += c;
-
-            if (!inUpper){
-                res += resChar.toLowerCase();
-            }
-            else {
-                res += resChar;
-            }
+    translate(str, lower_map, upper_map){
+        for (let val in lower_map) {
+            str = str.replace(new RegExp(val,'g'), lower_map[val]);
         }
-        return res;
-    }
-
-    translateEnglish(str){
-        let upperStr = str.toUpperCase();
-        for (let val in moreEngToRus) {
-            upperStr = upperStr.replace(val, moreEngToRus[val]);
+        for (let val in upper_map) {
+            str = str.replace(new RegExp(val,'g'), upper_map[val]);
         }
-        console.log(upperStr);
+        return str;
     }
 
     detectLanguage(str){
