@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const fs = require('fs');
 const app = express();
 
 const PORT = process.env.PORT || 4000;
@@ -33,7 +34,7 @@ app.use((request, response, next) => {
 
 // authorization
 app.use((request, response, next) => {
-    var authorizeValue = JSON.stringify(request.headers.cookie);
+    let authorizeValue = JSON.stringify(request.headers.cookie);
 
     if (authorizeValue == undefined || !authorizeValue.includes("authorize"))
         response.status(403);
@@ -48,19 +49,29 @@ app.use((request, response, next) => {
     next();
 });
 
+// just display hello world
+app.get('*', (request, response, next) => {
+    fs.readdir(__dirname + request.url.substring(3), (err, files) => {
+        var upperDirectories = __dirname.split("/");
+        let dirname = upperDirectories[upperDirectories.length - 1];
+        console.log(dirname);
 
+        if (files !== undefined && files.indexOf(dirname) == -1) {
+            console.log(__dirname);
+            files.unshift('.', '..');
+            response.send({"content": files});
+        }
+        else
+            next();
+    });
+});
 
 // handle other errors
 app.use((err, req, res, next) => {
     res.setHeader("X-Request-Error", "Unknown request");
-    res.status(503);
+    res.status(503).send();
+    next();
 });
-
-// just display hello world
-app.get('*', (request, response) => {
-    response.send('Hello from Express!')
-});
-
 
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
