@@ -10,7 +10,7 @@
   "author": "Aleksei Verkholantcev <alex-vee@yandex-team.ru>",
   "license": "ISC",
   "dependencies": {
-    "express": "4.14.0"
+    "express": "^4.14.0"
   },
   "devDependencies": {
     "fs-extra": "^0.30.0",
