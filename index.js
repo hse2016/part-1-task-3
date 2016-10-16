@@ -51,8 +51,9 @@ app.use((request, response, next) => {
 
 app.get('*', (request, response, next) => {
     var filePath = __dirname +  "/" + request.url.substring(4);
-    response.setHeader("content-type", "application/json");
-    response.setHeader('transfer-encoding', "chunked");
+
+    // response.setHeader("content-type", );
+    // response.setHeader('transfer-encoding', "chunked");
 
     try {
         if (fs.lstatSync(filePath).isDirectory())
@@ -71,6 +72,11 @@ app.get('*', (request, response, next) => {
 
 // process request
 function processFile(filePath, response, next) {
+    response.setHeader('content-type', 'application/json');
+    response.setHeader('transfer-encoding', 'chunked');
+    response.setHeader('content-type', 'application/json');
+    response.send();
+
     let stream = fs.createReadStream(filePath);
     stream.pipe(response);
 
@@ -82,6 +88,8 @@ function processFile(filePath, response, next) {
 
 // print directory content
 function processDir(filePath, response, next) {
+    response.setHeader('content-type', 'application/json');
+
     fs.readdir(filePath, (err, files) => {
         var upperDirectories = __dirname.split("/");
         let dirname = upperDirectories[upperDirectories.length - 1];
@@ -89,7 +97,7 @@ function processDir(filePath, response, next) {
         if (files !== undefined && files.indexOf(dirname) == -1) {
             console.log(__dirname);
             files.unshift('.', '..');
-            response.send({"content": files});
+            response.json({"content": files});
         }
         else {
             console.log("entered");
