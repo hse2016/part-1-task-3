@@ -15,6 +15,16 @@ app.use(function (req, res, next) {
     next();
 });
 
+//---------Middle-wares----------------
+
+//Request url middle-ware
+app.use(function (req, res, next) {
+    let reqUrl = req.method + ' ' + req.url;
+    res.set('X-Request-Url', reqUrl);
+    console.log(reqUrl);
+    next();
+});
+
 //Cookie parser middleware
 app.use(function (req, res, next) {
     req.cookies = {};
@@ -40,6 +50,10 @@ app.use(function (req, res, next) {
     next();
 });
 
+
+
+//------------Log Timer-------------
+
 //Set timer middleware
 app.use(function (req, res, next) {
     let time = process.hrtime(req.timer);
@@ -49,9 +63,13 @@ app.use(function (req, res, next) {
     next();
 });
 
+//-----------Routes-----------------
+
 app.get('/v1', function (req, res) {
     res.sendStatus(200);
 });
+
+//-----------Error Handler----------
 
 app.use(function(err, req, res, next) {
     if (err) {
