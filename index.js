@@ -52,12 +52,18 @@ app.use((request, response, next) => {
 app.get('*', (request, response, next) => {
     var filePath = __dirname +  "/" + request.url.substring(4);
     console.log(filePath);
+    console.log(request.url.substring(4));
 
-    if (fs.lstatSync(filePath).isDirectory())
-        processDir(filePath, response, next);
+    try {
+        if (fs.lstatSync(filePath).isDirectory())
+            processDir(filePath, response, next);
 
-    if (fs.lstatSync(filePath).isFile())
-        processFile(filePath, response, next);
+        if (fs.lstatSync(filePath).isFile())
+            processFile(filePath, response, next);
+    }
+    catch (err) {
+        next();
+    }
 }, (req, res) => {
         res.setHeader("X-Request-Error", "Unknown request");
         res.status(503).send();
