@@ -13,9 +13,6 @@ const IMAGE_ERROR_403 = 'http://t01.deviantart.net/LGMEna-IVYL1FNjkW8pAc7oJc1s=/
 const IMAGE_ERROR_503 = 'http://t01.deviantart.net/LGMEna-IVYL1FNjkW8pAc7oJc1s=/fit-in/150x150/filters:no_upscale():origin()/pre09/2ee3/th/pre/f/2011/162/f/b/403_error_tan___uncolored_by_foxhead128-d3io641.png';
 const MESSAGE_ERROR_403 = 'Forbidden';
 
-const STATE_OK = 0;
-const STATE_MULTIPLE_LANGUAGE = 1;
-
 const FILETYPE_RU = 0;
 const FILETYPE_EN = 1;
 const FILETYPE_UNKNOWN = 2;
@@ -63,12 +60,7 @@ let transliterateToEnglish = function(buffer) {
     if (transliteratedChar !== null) {
       res += transliteratedChar;
     } else {
-      transliteratedChar = findInObject(char, TRANSLITERATION_MAP_TO_RUSSIAN);
-      if (transliteratedChar !== null) {
-        return null;
-      } else {
-        res += char;
-      }
+      res += char;
     }
   }
 
@@ -77,18 +69,20 @@ let transliterateToEnglish = function(buffer) {
 
 let transliterateToRussian = function(buffer) {
   let text = buffer.toString('utf-8');
-  // text.replace('Zh', 'Ж');
-  // text.replace('Shh', 'Щ');
-  // text.replace('Sh', 'Ш');
-  // text.replace('Je', 'Э');
-  // text.replace('Ju', 'Ю');
-  // text.replace('Ja', 'Я');
-  // text.replace('zh', 'ж');
-  // text.replace('shh', 'Щ');
-  // text.replace('sh', 'ш');
-  // text.replace('je', 'э');
-  // text.replace('ju', 'ю');
-  // text.replace('ja', 'я');
+
+  text = text.replace('Zh', 'Ж');
+  text = text.replace('Shh', 'Щ');
+  text = text.replace('Sh', 'Ш');
+  text = text.replace('Je', 'Э');
+  text = text.replace('Ju', 'Ю');
+  text = text.replace('Ja', 'Я');
+  text = text.replace('zh', 'ж');
+  text = text.replace('shh', 'Щ');
+  text = text.replace('sh', 'ш');
+  text = text.replace('je', 'э');
+  text = text.replace('ju', 'ю');
+  text = text.replace('ja', 'я');
+
   let res = '';
 
   for (let i = 0; i < text.length; ++i) {
@@ -97,65 +91,37 @@ let transliterateToRussian = function(buffer) {
     if (transliteratedChar !== null) {
       res += transliteratedChar;
     } else {
-      transliteratedChar = findInObject(char, TRANSLITERATION_MAP_TO_ENGLISH);
-      if (transliteratedChar !== null) {
-        return null;
-      } else {
-        res += char;
-      }
+      res += char;
     }
   }
-
   return res;
 };
 
 class TransformTransliterateToEnglish extends Transform {
   constructor(options) {
     super(options);
-    this.__state = STATE_OK;
   }
 
   _transform(data, encoding, callback) {
     let transformed = transliterateToEnglish(data);
 
-    if (transformed === null) {
-      this.__state = STATE_MULTIPLE_LANGUAGE;
-    }
-
-    if (this.__state === STATE_OK) {
-      this.push(transformed);
-    }
+    this.push(transformed);
 
     callback();
-  }
-
-  isOK() {
-    return this.__state === STATE_OK;
   }
 }
 
 class TransformTransliterateToRussian extends Transform {
   constructor(options) {
     super(options);
-    this.__state = STATE_OK;
   }
 
   _transform(data, encoding, callback) {
     let transformed = transliterateToRussian(data);
 
-    if (transformed === null) {
-      this.__state = STATE_MULTIPLE_LANGUAGE;
-    }
-
-    if (this.__state === STATE_OK) {
-      this.push(transformed);
-    }
+    this.push(transformed);
 
     callback();
-  }
-
-  isOK() {
-    return this.__state === STATE_OK;
   }
 }
 
@@ -291,36 +257,44 @@ let createFileSeekerMiddleware = function() {
           }
 
           let text = data.toString('utf-8');
-          let readStream = fs.createReadStream(fullpath);
-          let transformerStream = null;
-          let transformed = "";
+          let toRussian = false;
+          let toEnglish = false;
+
           for (let i = 0; i < text.length; ++i) {
             if (findInObject(text[i], TRANSLITERATION_MAP_TO_ENGLISH)) {
-              transformerStream = new TransformTransliterateToEnglish();
-              break;
-            } else if(findInObject(text[i], TRANSLITERATION_MAP_TO_RUSSIAN)) {
-              transformerStream = new TransformTransliterateToRussian();
-              break;
+              toRussian = true;
+            }
+
+            if (findInObject(text[i], TRANSLITERATION_MAP_TO_RUSSIAN)) {
+              toEnglish = true;
             }
           }
 
-          if (transformerStream === null) {
+          let transformerStream = null;
+          let transformed = "";
+          if (toRussian && toEnglish) {
+            res.status(503);
+            res.end();
+            return;
+          } else if(toRussian) {
+            console.log('ru');
+            transformerStream = new TransformTransliterateToEnglish();
+          } else {
+            console.log('en');
             transformerStream = new TransformTransliterateToRussian();
           }
+
+          let readStream = fs.createReadStream(fullpath);
+
           readStream.pipe(transformerStream);
           transformerStream.on('data', (chunk) => {
             transformed += chunk.toString('utf-8');
           });
           transformerStream.on('end', () => {
-            if (transformerStream.isOK()) {
-              res.header('transfer-encoding', 'chunked');
-              res.header('Content-Type', 'text/plain;charset=utf-8'); // for encoding
-              let obj = JSON.stringify({'content': transformed});
-              res.end(obj);
-            } else {
-              res.status(503);
-              res.end();
-            }
+            res.header('transfer-encoding', 'chunked');
+            res.header('Content-Type', 'text/plain;charset=utf-8'); // for encoding
+            let obj = JSON.stringify({'content': transformed});
+            res.end(obj);
           });
         });
         let fileStream = fs.createReadStream(fullpath);
@@ -366,7 +340,7 @@ let createErrorMiddleware = function() {
 
 // middlewares
 app.use(createTimeLoggerBegin(timeHolder));
-app.use(createCookieChecker());
+// app.use(createCookieChecker());
 app.use(createPayload());
 app.use(createHeaderLogger());
 app.use(createTimeLoggerEnd(timeHolder));
