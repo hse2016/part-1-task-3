@@ -12,14 +12,22 @@ app.listen(PORT, function () {
 });
 
 // log start time of middlewares
-app.use(function (req, res, next) {
+app.use((req, res, next) => {
     req.startAt = process.hrtime();
+    next();
+});
+
+//logging the requested methods and URLs
+app.use((req, res, next) => {
+    let method_url = req.method + ' ' + req.originalUrl;
+    res.setHeader('X-Request-Url', method_url);
+    console.log('X-Request-Url: ', method_url);
     next();
 });
 
 
 // cookies process
-app.use(function (req, res, next) {
+app.use((req, res, next) => {
     let arr_cookies = req.headers.cookie.split(';');
     let cookies = [];
     arr_cookies.forEach((i) => {
@@ -40,10 +48,11 @@ app.use(function (req, res, next) {
 
 });
 
-app.use(function (req, res, next) {
+//set duration of execution
+app.use((req, res, next) => {
     let time = process.hrtime(req.startAt);
     res.setHeader('X-Time', time);
-    console.log((time[1] / 1000).toFixed(3));
+    console.log('X-Time: ', (time[1] / 1000).toFixed(3));
     next();
 });
 
