@@ -195,18 +195,20 @@ function readPath(req, res, next) {
     } else if (fileStats.isFile()){
         var input = fs.createReadStream(path);
         var transform = new TransliterationStream();
+        res.status(200);
+        res.locals.status = 200;
         res.locals.result = '';
-        transform.on('data', (function(chunk) {
-            this.locals.result += chunk.toString('utf8');
-        }).bind(res));
-        transform.on('finish', (function(next, chunk){
-            console.log('Result: ' + this.locals.result);
-            this.locals.result = {'content': this.locals.result};
-            this.status(200);
-            this.locals.status = 200;
-            next();
-        }).bind(res, next));
-        input.pipe(transform).read();
+        // transform.on('data', (function(chunk) {
+        //     this.locals.result += chunk.toString('utf8');
+        // }).bind(res));
+        // transform.on('finish', (function(next, chunk){
+        //     console.log('Result: ' + this.locals.result);
+        //     this.locals.result = {'content': this.locals.result};
+        //     this.status(200);
+        //     this.locals.status = 200;
+        //     next();
+        // }).bind(res, next));
+        input.pipe(transform).pipe(res);
     } else {
         next(new Error('No such file or directory'));
     }
