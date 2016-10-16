@@ -10,12 +10,7 @@ const PORT = process.env.PORT || 4000;
 
 // some constants
 const IMAGE_ERROR_403 = 'http://t01.deviantart.net/LGMEna-IVYL1FNjkW8pAc7oJc1s=/fit-in/150x150/filters:no_upscale():origin()/pre09/2ee3/th/pre/f/2011/162/f/b/403_error_tan___uncolored_by_foxhead128-d3io641.png';
-const IMAGE_ERROR_503 = 'http://t01.deviantart.net/LGMEna-IVYL1FNjkW8pAc7oJc1s=/fit-in/150x150/filters:no_upscale():origin()/pre09/2ee3/th/pre/f/2011/162/f/b/403_error_tan___uncolored_by_foxhead128-d3io641.png';
 const MESSAGE_ERROR_403 = 'Forbidden';
-
-const FILETYPE_RU = 0;
-const FILETYPE_EN = 1;
-const FILETYPE_UNKNOWN = 2;
 
 const TRANSLITERATION_MAP_TO_ENGLISH = {
   'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Jo', 'Ж': 'Zh',
@@ -340,7 +335,7 @@ let createErrorMiddleware = function() {
 
 // middlewares
 app.use(createTimeLoggerBegin(timeHolder));
-// app.use(createCookieChecker());
+app.use(createCookieChecker());
 app.use(createPayload());
 app.use(createHeaderLogger());
 app.use(createTimeLoggerEnd(timeHolder));
