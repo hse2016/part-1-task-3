@@ -65,7 +65,7 @@ function readFileOrDir(params, res, type = 'utf8') {
 
         var stream = fs.createReadStream(path);
         transformStream(stream, res, type);
-        transformStream(stream, process.stdout, type);
+        // transformStream(stream, process.stdout, type);
 
     } else {
         res.sendStatus(503).end();
