@@ -54,24 +54,21 @@ app.get('*', (request, response, next) => {
     fs.readdir(__dirname + request.url.substring(3), (err, files) => {
         var upperDirectories = __dirname.split("/");
         let dirname = upperDirectories[upperDirectories.length - 1];
-        console.log(dirname);
 
         if (files !== undefined && files.indexOf(dirname) == -1) {
             console.log(__dirname);
             files.unshift('.', '..');
             response.send({"content": files});
         }
-        else
+        else {
+            console.log("entered");
             next();
+        }
     });
-});
-
-// handle other errors
-app.use((err, req, res, next) => {
-    res.setHeader("X-Request-Error", "Unknown request");
-    res.status(503).send();
-    next();
-});
+}, (req, res) => {
+        res.setHeader("X-Request-Error", "Unknown request");
+        res.status(503).send();
+    });
 
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
