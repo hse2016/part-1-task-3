@@ -29,11 +29,11 @@ const TRANSLITERATION_MAP_TO_RUSSIAN = {
   'Z': 'З', 'I': 'И', 'J': 'Й', 'K': 'К', 'L': 'Л', 'M': 'М', 'N': 'Н', 'O': 'О',
   'P': 'П', 'R': 'Р', 'S': 'С', 'T': 'Т', 'U': 'У', 'F': 'Ф', 'H': 'Х', 'C': 'Ц',
   'Ch': 'Ч', 'Sh': 'Ш', 'Shh': 'Щ', 'Y': 'Ы', 'Je': 'Э',
-  'Ju': 'Ю', 'Ja': 'Я', 'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д',
+  'Ju': 'Ю', 'Ja': 'Я', 'W': 'Щ', 'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д',
   'e': 'е', 'jo': 'ё', 'zh': 'ж', 'z': 'з', 'i': 'и', 'j': 'й', 'k': 'к',
   'l': 'л', 'm': 'м', 'n': 'н', 'o': 'о', 'p': 'п', 'r': 'р', 's': 'с',
   't': 'т', 'u': 'у', 'f': 'ф', 'h': 'х', 'c': 'ц', 'ch': 'ч', 'sh': 'ш',
-  'shh': 'щ', '#': 'ъ', 'y': 'ы', '\'': 'ь', 'je': 'э', 'ju': 'ю', 'ja': 'я'
+  'shh': 'щ', '#': 'ъ', 'y': 'ы', '\'': 'ь', 'je': 'э', 'ju': 'ю', 'ja': 'я', 'w': 'щ'
 };
 
 let findInObject = function(key, arr) {
@@ -65,18 +65,23 @@ let transliterateToEnglish = function(buffer) {
 let transliterateToRussian = function(buffer) {
   let text = buffer.toString('utf-8');
 
-  text = text.replace('Zh', 'Ж');
+  text = text.replace('Ch', 'Ц');
+  text = text.replace('Jo', 'Ё');
   text = text.replace('Shh', 'Щ');
   text = text.replace('Sh', 'Ш');
+  text = text.replace('Zh', 'Ж');
   text = text.replace('Je', 'Э');
   text = text.replace('Ju', 'Ю');
   text = text.replace('Ja', 'Я');
-  text = text.replace('zh', 'ж');
+  text = text.replace('Jo', 'Ё');
+  text = text.replace('ch', 'ц');
   text = text.replace('shh', 'Щ');
   text = text.replace('sh', 'ш');
+  text = text.replace('zh', 'ж');
   text = text.replace('je', 'э');
   text = text.replace('ju', 'ю');
   text = text.replace('ja', 'я');
+  text = text.replace('jo', 'ё');
 
   let res = '';
 
@@ -89,6 +94,7 @@ let transliterateToRussian = function(buffer) {
       res += char;
     }
   }
+  console.log(res);
   return res;
 };
 
@@ -207,15 +213,17 @@ let timeHolder = {};
 
 let createTimeLoggerBegin = function(holder) {
   return function(req, res, next) {
-    holder.begin = new Date().getTime();
+    let time = process.hrtime();
+    holder.begin = time[1] / 1000000 + time[0] * 1000;
     next();
   };
 };
 
 let createTimeLoggerEnd = function(holder) {
   return function(req, res, next) {
-    holder.end = new Date().getTime();
-    res.header('X-Time', holder.end - holder.begin);
+    let time = process.hrtime();
+    holder.end = time[1] / 1000000 + time[0] * 1000;
+    res.header('X-Time', (holder.end - holder.begin).toFixed(3));
     next();
   };
 };
