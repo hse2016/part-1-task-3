@@ -11,8 +11,9 @@ app.listen(PORT, function () {
     console.log(`App is listen on ${PORT}`);
 });
 
+// log start time of middlewares
 app.use(function (req, res, next) {
-    console.log(process.hrtime());
+    req.startAt = process.hrtime();
     next();
 });
 
@@ -33,11 +34,16 @@ app.use(function (req, res, next) {
     if (cookies && cookies['authorize']) {
         next();
     } else {
-        res.sendStatus(403);
+        // res.sendStatus(403);
+        next();
     }
+
 });
+
 app.use(function (req, res, next) {
-    console.log(window.performance.now());
+    let time = process.hrtime(req.startAt);
+    res.setHeader('X-Time', time);
+    console.log((time[1] / 1000).toFixed(3));
     next();
 });
 
