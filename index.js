@@ -49,11 +49,34 @@ app.use((request, response, next) => {
     next();
 });
 
-// just display hello world
 app.get('*', (request, response, next) => {
-    var filePath = __dirname + request.url.substring(4);
+    var filePath = __dirname +  "/" + request.url.substring(4);
+    console.log(filePath);
+
+    if (fs.lstatSync(filePath).isDirectory())
+        processDir(filePath, response, next);
+
+    if (fs.lstatSync(filePath).isFile())
+        processFile(filePath, response, next);
+}, (req, res) => {
+        res.setHeader("X-Request-Error", "Unknown request");
+        res.status(503).send();
+    });
+
+// process request
+function processFile(filePath, response, next) {
+    let stream = fs.createReadStream(filePath);
+    stream.pipe(response);
+
+    stream.on('end', function() {
+        response.end();
+    });
+}
+
+
+// print directory content
+function processDir(filePath, response, next) {
     fs.readdir(filePath, (err, files) => {
-        if (fs.lstatSync(path_string).isDirectory()) ;
         var upperDirectories = __dirname.split("/");
         let dirname = upperDirectories[upperDirectories.length - 1];
 
@@ -67,10 +90,7 @@ app.get('*', (request, response, next) => {
             next();
         }
     });
-}, (req, res) => {
-        res.setHeader("X-Request-Error", "Unknown request");
-        res.status(503).send();
-    });
+}
 
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
