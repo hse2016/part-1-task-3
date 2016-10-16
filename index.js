@@ -51,8 +51,8 @@ app.use((request, response, next) => {
 
 app.get('*', (request, response, next) => {
     var filePath = __dirname +  "/" + request.url.substring(4);
-    console.log(filePath);
-    console.log(request.url.substring(4));
+    response.setHeader("content-type", "application/json");
+    response.setHeader('transfer-encoding', "chunked");
 
     try {
         if (fs.lstatSync(filePath).isDirectory())
