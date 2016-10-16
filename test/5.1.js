@@ -73,23 +73,15 @@ describe('Dir lookup', () => {
         });
 
         it('should file in dir', (done) => {
-            fs.mkdtemp(rnd.dirName + '/tmp-', (err, folder) => {
-                if (err) {
-                    return done(err);
-                }
+            rndFileFolderCustomPath(done);
+        });
 
-                let rndFilename = 'filename' + String(Math.random()).slice(2);
+        it('should file in dir. Path contain "./"', (done) => {
+            rndFileFolderCustomPath(done, '/./');
+        });
 
-                fs.writeFile(folder + '/' + rndFilename, '', (err) => {
-                    rq(app)
-                        .get(prefix + folder.slice(2))
-                        .set('Cookie', ['authorize=12345667'])
-                        .end((err, res) => {
-                            res.body['content'].should.containEql(rndFilename);
-                            done();
-                        });
-                });
-            });
+        it('should file in dir. Path contain "../", but inside workPath', (done) => {
+            rndFileFolderCustomPath(done, '/tmp/../');
         });
 
         it('should return error if access to upper dir', (done) => {
@@ -102,4 +94,24 @@ describe('Dir lookup', () => {
                 });
         });
     });
+
+    function rndFileFolderCustomPath(done, path = '/') {
+        fs.mkdtemp(rnd.dirName + '/tmp-', (err, folder) => {
+            if (err) {
+                return done(err);
+            }
+
+            let rndFilename = 'filename' + String(Math.random()).slice(2);
+
+            fs.writeFile(folder +'/' + rndFilename, '', (err) => {
+                rq(app)
+                    .get(prefix + path.slice(1) + folder.slice(2))
+                    .set('Cookie', ['authorize=12345667'])
+                    .end((err, res) => {
+                        res.body['content'].should.containEql(rndFilename);
+                        done();
+                    });
+            });
+        });
+    }
 });

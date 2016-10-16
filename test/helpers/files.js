@@ -78,7 +78,7 @@ module.exports = {
             res.data += chunk;
         });
         res.on('end', function () {
-            callback(null, res.data);
+            callback(null, JSON.parse(res.data));
         });
     }
 };
