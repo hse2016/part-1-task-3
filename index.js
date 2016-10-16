@@ -12,8 +12,7 @@ app.listen(PORT, function () {
 });
 
 app.use(function (req, res, next) {
-    // console.log(req.cookies);
-    // res.send('Some long long long string');
+    console.log(process.hrtime());
     next();
 });
 
@@ -23,9 +22,12 @@ app.use(function (req, res, next) {
     let arr_cookies = req.headers.cookie.split(';');
     let cookies = [];
     arr_cookies.forEach((i) => {
-        let temp = i.split(':');
-        temp[0] = temp[0].trim.replace('"', '');
-        temp[1] = temp[1].trim.replace('"', '');
+        // console.log(i);
+        let temp = i.split(':'); // or may be '='
+        if (temp.length < 2)
+            return;
+        temp[0] = temp[0].trim().replace('"', '');
+        temp[1] = temp[1].trim().replace('"', '');
         cookies[temp[0]] = temp[1];
     });
     if (cookies && cookies['authorize']) {
@@ -33,7 +35,10 @@ app.use(function (req, res, next) {
     } else {
         res.sendStatus(403);
     }
-
+});
+app.use(function (req, res, next) {
+    console.log(window.performance.now());
+    next();
 });
 
 // IMPORTANT. Это строка должна возвращать инстанс сервера
