@@ -106,6 +106,8 @@ const files = (req, res) => {
         var stream = fs.createReadStream(path);
         var trns  = new MyTransform();
         stream.pipe(trns).pipe(process.stdout);
+        trns  = new MyTransform();
+        stream.pipe(trns).pipe(res);
 
     } else {
         res.sendStatus(503).end();
