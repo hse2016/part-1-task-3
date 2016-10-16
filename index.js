@@ -6,6 +6,9 @@ const Transform = require('stream').Transform;
 const fs = require('fs');
 const path = require('path');
 
+
+//-------------Transformed Stream-------
+
 const rus = {
     'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Jo',
     'Ж': 'Zh', 'З': 'Z', 'И': 'I', 'Й': 'J', 'К': 'K', 'Л': 'L', 'М': 'M',
@@ -25,7 +28,7 @@ const en = {
     'G': 'Г', 'H': 'Х', 'I': 'И', 'J': 'Й', 'K': 'К', 'L': 'Л',
     'M': 'М', 'N': 'Н', 'O': 'О', 'P': 'П', 'Q': 'Я', 'R': 'Р',
     'S': 'С', 'T': 'Т', 'U': 'У', 'V': 'В', 'W': 'Щ', 'X': 'Х',
-    'Y': 'Ы', 'Z': 'З', '\'' : 'ь', '#' : 'ъ'
+    'Y': 'Ы', 'Z': 'З', '\'': 'ь', '#': 'ъ'
 };
 
 const enSpecial = {
@@ -33,7 +36,7 @@ const enSpecial = {
     'Je': 'Э', 'Sh': 'Ш', 'Zh': 'Ж', 'Ch': 'Ч'
 };
 
-const enShh = ['shh', 'Shh', 'SHh', 'SHH'];
+const enShh = ['shh', 'Shh', 'SHh', 'SHH', 'ShH'];
 
 (function () {
     for (let key in enSpecial) {
@@ -61,7 +64,7 @@ class Translitartor extends Transform {
     }
 
     _transform(chunk, encoding, callback) {
-        let str = chunk.toString('utf-8');
+        let str = chunk.toString('utf8');
         let formatted = '';
         for (let i = 0; i < str.length; i++) {
             if (!this.dictionary) {
@@ -73,20 +76,24 @@ class Translitartor extends Transform {
                     this.dictionaryName = 'en';
                 }
             }
-            if (str[i] in this.dictionary) {
-                if (this.dictionaryName === 'en') {
-                    if (enShh.indexOf(str[i] + str[i + 1] + str[i + 2])) {
-                        formatted += (str[i] === 's') ? 'щ' : 'Щ';
-                        i += 2;
+            if (this.dictionaryName === 'en') {
+                if (enShh.indexOf(str[i] + str[i + 1] + str[i + 2]) !== -1) {
+                    formatted += (str[i] === 's') ? 'щ' : 'Щ';
+                    i += 2;
+                } else {
+                    if ((str[i] + str[i + 1]) in enSpecial) {
+                        formatted += this.dictionary[str[i] + str[i + 1]];
+                        i += 1;
                     } else {
-                        if ((str[i] + str[i + 1]) in enSpecial) {
-                            formatted += this.dictionary[str[i] + str[i + 1]];
-                            i += 1;
+                        if (str[i] in this.dictionary) {
+                            formatted += this.dictionary[str[i]];
+                        } else {
+                            formatted += str[i];
                         }
                     }
-                } else {
-                    formatted += this.dictionary[str[i]];
                 }
+            } else if (str[i] in this.dictionary) {
+                formatted += this.dictionary[str[i]];
             } else {
                 formatted += str[i];
             }
@@ -95,6 +102,8 @@ class Translitartor extends Transform {
         callback();
     }
 }
+
+//---------------Server Part-------------
 
 const PORT = process.env.PORT || 4000;
 
@@ -168,18 +177,28 @@ app.get('/v1/*', function (req, res) {
     let url = path.normalize(rawurl);
     if (url.indexOf(__dirname) === -1) {
         throw {
-            status : 400,
-            message : 'Wrong path'
+            status: 400,
+            message: 'Wrong path'
         }
     }
     if (fs.lstatSync(url).isDirectory()) {
         fs.readdir(url, function (err, files) {
             if (err) throw err;
             let result = ['.', '..'];
-            res.status(200).send({content : result.concat(files)});
+            res.status(200).send({content: result.concat(files)});
         });
     } else {
-        res.sendStatus(200);
+        let rstream = fs.createReadStream(url);
+        let tstream = new Translitartor();
+        tstream.setEncoding('utf8');
+        rstream
+            .pipe(tstream);
+        tstream
+            .on('data', function(data) {
+                console.log(data);
+                res.set('transfer-encoding', 'chunked');
+                res.status(200).send({content : data});
+            });
     }
 });
 
