@@ -93,7 +93,7 @@ const files = (req, res) => {
         // console.log('pam');
         path = req.params['arr'] + req.params[0];
     }
-    path = '.' + path;
+    path = './' + path;
 
     if (fs.lstatSync(path).isDirectory()) {
         fs.readdir(path, (err, items) => {
@@ -104,8 +104,8 @@ const files = (req, res) => {
     } else if (fs.lstatSync(path).isFile()) {
         console.log('create stream');
         var stream = fs.createReadStream(path);
-        MyTransform(stream, res);
-        MyTransform(stream, process.stdout);
+        var trns  = new MyTransform();
+        stream.pipe(trns).pipe(process.stdout);
 
     } else {
         res.sendStatus(503).end();
@@ -115,21 +115,109 @@ const files = (req, res) => {
 
 module.exports = app;
 
+const rusToEng_upper = {
+    'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Jo', 'Ж': 'Zh', 'З': 'Z',
+    'И': 'I', 'Й': 'J', 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R',
+    'С': 'S', 'Т': 'T', 'У': 'U', 'Ф': 'F', 'Х': 'H', 'Ц': 'C', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Shh',
+    'Ъ': '#', 'Ы': 'Y', 'Ь': '\'', 'Э': 'Je', 'Ю': 'Ju', 'Я': 'Ja'
+};
+
+const rusToEng_lower = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'jo', 'ж': 'zh', 'з': 'z',
+    'и': 'i', 'й': 'j', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r',
+    'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'c', 'ч': 'ch', 'ш': 'sh', 'щ': 'shh',
+    'ъ': '#', 'ы': 'y', 'ь': '\'', 'э': 'je', 'ю': 'ju', 'я': 'ja'
+};
+
+const engToRus_upper = {
+    'A': 'А', 'B': 'Б', 'C': 'Ц', 'D': 'Д', 'E': 'Е', 'F': 'Ф', 'G': 'Г', 'H': 'Х', 'I': 'И',
+    'J': 'Й', 'K': 'К', 'L': 'Л', 'M': 'М', 'N': 'Н', 'O': 'О', 'P': 'П', 'Q': 'Я', 'R': 'Р',
+    'S': 'С', 'T': 'Т', 'U': 'У', 'V': 'В', 'W': 'Щ', 'X': 'Х', 'Y': 'Ы', 'Z': 'З', '\'': 'Ь',
+    'JO': 'Ё', 'JU': 'Ю', 'YO': 'Ё', 'CH': 'Ч',
+    'YA': 'Я', 'JE': 'Э', 'SHH': 'Щ', 'SH': 'Ш', 'ZH': 'Ж'
+};
+
+const engToRus_lower = {
+    'a': 'А', 'b': 'Б', 'c': 'Ц', 'd': 'Д', 'e': 'Е', 'f': 'Ф', 'g': 'Г', 'h': 'Х', 'i': 'И',
+    'j': 'Й', 'k': 'К', 'l': 'Л', 'm': 'М', 'n': 'Н', 'o': 'О', 'P': 'П', 'Q': 'Я', 'R': 'Р',
+    'S': 'С', 'T': 'Т', 'U': 'У', 'V': 'В', 'W': 'Щ', 'X': 'Х', 'Y': 'Ы', 'Z': 'З', '\'': 'Ь'
+    'JO': 'Ё', 'JU': 'Ю', 'YO': 'Ё', 'CH': 'Ч',
+    'YA': 'Я', 'JE': 'Э', 'SHH': 'Щ', 'SH': 'Ш', 'ZH': 'Ж'
+};
 
 class MyTransform extends Transform {
 
     constructor(opt){
         super(opt);
-        console.log('constructor');
+        this.isToRus = false;
+        this.detected = false;
     }
 
     _transform(chunk, encoding, callback) {
-        console.log(chunk);
-        var str = chunk.toString('utf8').toUpperCase();
-        let new_str = this.translit(str);
-        console.log(new_str);
-        this.push(new_str);
+        var str = chunk.toString('utf8');
+        if (this.detected === false){
+            this.detectLanguage(str);
+        }
+        console.log(str);
+        if (this.detected === true){
+            if (this.isToRus) {
+                str = this.translateEnglish(str);
+            }
+            else {
+                str = this.translate(str, rusToEng);
+            }
+        }
+        this.push(str);
         callback();
+    }
+
+    translate(str, map) {
+        let res = '';
+        str = str;
+        for (let i = 0; i < str.length; i++){
+            let inUpper = false;
+
+            if (str.charAt(i).toUpperCase() === str.charAt(i)){
+                inUpper = true;
+            }
+            let char = str.charAt(i).toUpperCase();
+            let c = map[char];
+
+            let resChar = '';
+            if (c === undefined)
+                resChar += char;
+            else
+                resChar += c;
+
+            if (!inUpper){
+                res += resChar.toLowerCase();
+            }
+            else {
+                res += resChar;
+            }
+        }
+        return res;
+    }
+
+    translateEnglish(str){
+        let upperStr = str.toUpperCase();
+        for (let val in moreEngToRus) {
+            upperStr = upperStr.replace(val, moreEngToRus[val]);
+        }
+        console.log(upperStr);
+    }
+
+    detectLanguage(str){
+        let eng = str.search(new RegExp('[a-z]', 'i'));
+        let rus = str.search(new RegExp('[а-я]', 'i'));
+        if (eng > -1 && (eng < rus || rus < 0)){
+            this.detected = true;
+            this.isToRus = true;
+        }
+        else if (rus > -1 && (rus < eng || eng < 0)){
+            this.detected = true;
+            this.isToRus = false;
+        }
     }
 }
 
@@ -137,7 +225,7 @@ class MyTransform extends Transform {
 
 const rq = require('supertest');
 rq(app)
-    .get('/v1/files')
+    .get('/v1/files/file.en.txt')
     .set('Cookie', ['authorize=12345667'])
     .expect(200)
     .end((err,res) => {});

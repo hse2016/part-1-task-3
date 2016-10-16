@@ -1,3 +1,4 @@
+'use strict';
 const rq = require('supertest');
 const app = require('../index');
 
