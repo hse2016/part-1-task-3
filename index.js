@@ -32,7 +32,7 @@ class TransliterationStream extends Transform {
         this.targetLanguage = undefined;
         this.stringBuffer = '';
         this.dict = new Dictionary();
-        this.russianIdentifiers = dict.russians.slice(0, dict.russians.length / 2);
+        this.russianIdentifiers = this.dict.russians.slice(0, this.dict.russians.length / 2);
         this.latinIdentifiers = ['a', 'b', 'v', 'g', 'd', 'e', 'z', 'i',
                                  'j', 'k', 'l', 'm', 'n', 'o', 'p', 'r',
                                  's', 't','u', 'f', 'h', 'c', '#', 'y', "'"];
@@ -41,20 +41,20 @@ class TransliterationStream extends Transform {
     _transform(chunk, encoding, callback) {
         var str = chunk.toString('utf8');
         var result = '';
-        if (targetLanguage !== undefined) {
+        if (this.targetLanguage === undefined) {
             for (var index = 0; index < str.length; index++) {
                 if (this.russianIdentifiers.indexOf(str[index].toLowerCase()) != -1) {
-                    targetLanguage = 'latin';
+                    this.targetLanguage = 'latin';
                     break;
                 } else if (this.latinIdentifiers.indexOf(str[index].toLowerCase()) != -1) {
-                    targetLanguage = 'russian';
+                    this.targetLanguage = 'russian';
                     break;
                 }
             }
         }
-        if (targetLanguage !== undefined) {
+        if (this.targetLanguage !== undefined) {
             index = 0;
-            if (targetLanguage == 'latin') {
+            if (this.targetLanguage == 'latin') {
                 for (var index = 0; index < str.length; index++) {
                     if (this.dict.russians.indexOf(str[index]) != -1) {
                         result += this.dict.toLatin[str[index]];
@@ -62,7 +62,7 @@ class TransliterationStream extends Transform {
                         result += str[index];
                     }
                 }
-            } else if (targetLanguage == 'russian') {
+            } else if (this.targetLanguage == 'russian') {
                 var index = 0;
                 while (index < str.length - 2) {
                     if (this.dict.latins.indexOf(str.slice(index, index+3)) != -1) {
@@ -92,7 +92,7 @@ class TransliterationStream extends Transform {
         var index = 0;
         var result = '';
         var str = this.stringBuffer;
-        if (targetLanguage == 'russian') {
+        if (this.targetLanguage == 'russian') {
             if (this.dict.latins.indexOf(str.slice(index, index+2)) != -1) {
                 result += this.dict.toRussian[str.slice(index, index+2)];
                 index += 2;
@@ -178,6 +178,20 @@ app.use(authorize);
 app.use(handleError);
 app.use(endTimeLogging);
 app.use(resolve);
+
+
+//just for testing. will be moved to special function later
+var fs = require('fs');
+var input = fs.createReadStream('/home/prefx/projects/part-1-task-3/files/file.multi.txt');
+var transform = new TransliterationStream();
+var result = '';
+transform.on('data', function (chunk) {
+    result += chunk.toString('utf8');
+});
+transform.on('finish', function (chunk) {
+    console.log(result);
+});
+input.pipe(transform).read();
 
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
