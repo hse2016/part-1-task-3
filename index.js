@@ -14,15 +14,60 @@ class Dictionary {
         this.latins = ['A', 'B', 'V', 'G', 'D', 'E', 'Jo', 'Zh', 'Z', 'I', 'J',
                        'K', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'U', 'F', 'H',
                        'C', 'Ch', 'Sh', 'Shh', '#', 'Y', "'", 'Je', 'Ju', 'Ja'];
-
+        this.latins = this.latins.map((element) => {return element.toLowerCase();}).concat(this.latins);
         this.toLatin = {};
         this.toRussian = {};
         for (var i = 0; i < this.russians.length; i++) {
-            this.toLatin[this.russians[i]] = this.latins[i % this.latins.length];
-        }
-        for (var i = 0; i < this.latins.length; i++) {
+            this.toLatin[this.russians[i]] = this.latins[i];
             this.toRussian[this.latins[i]] = this.russians[i];
         }
+    }
+}
+
+var Transform = require('stream').Transform;
+
+class TransliterationStream extends Transform {
+    constructor(options) {
+        super(options);
+        this.targetLanguage = undefined;
+        this.stringBuffer = '';
+        this.dict = new Dictionary();
+        this.russianIdentifiers = dict.russians.slice(0, dict.russians.length / 2);
+        this.latinIdentifiers = ['a', 'b', 'v', 'g', 'd', 'e', 'z', 'i',
+                                 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'r',
+                                 's', 't','u', 'f', 'h', 'c', '#', 'y', "'"];
+    }
+
+    _transform(chunk, encoding, callback) {
+        var str = chunk.toString('utf8');
+        var result = '';
+        if (targetLanguage !== undefined) {
+            for (var index = 0; index < str.length; index++) {
+                if (this.russianIdentifiers.indexOf(str[index].toLowerCase()) != -1) {
+                    targetLanguage = 'latin';
+                    break;
+                } else if (this.latinIdentifiers.indexOf(str[index].toLowerCase()) != -1) {
+                    targetLanguage = 'russian';
+                    break;
+                }
+            }
+        }
+        if (targetLanguage !== undefined) {
+            index = 0;
+            if (targetLanguage == 'latin') {
+                for (var index = 0; index < str.length; index++) {
+                    if (this.dict.russians.indexOf(str[index]) != -1) {
+                        result += this.dict.toLatin[str[index]];
+                    }
+                }
+            } else if (targetLanguage == 'russian') {
+                //TODO
+            }
+            this.push(result);
+        } else {
+            this.push(str);
+        }
+        callback();
     }
 }
 
