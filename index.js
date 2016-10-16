@@ -142,7 +142,7 @@ function authorize(req, res, next) {
     cookieStrings = cookieStrings.split(';');
     cookies = {};
     for (var i in cookieStrings) {
-        var cookie = cookieStrings[i];
+        var cookie = cookieStrings[i].trim();
         var splitIndex = cookie.indexOf('=');
         cookies[cookie.slice(0, splitIndex)] = cookie.slice(splitIndex+1, cookie.length);
     }
