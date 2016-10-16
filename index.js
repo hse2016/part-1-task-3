@@ -25,8 +25,22 @@ const en = {
     'G': 'Г', 'H': 'Х', 'I': 'И', 'J': 'Й', 'K': 'К', 'L': 'Л',
     'M': 'М', 'N': 'Н', 'O': 'О', 'P': 'П', 'Q': 'Я', 'R': 'Р',
     'S': 'С', 'T': 'Т', 'U': 'У', 'V': 'В', 'W': 'Щ', 'X': 'Х',
-    'Y': 'Ы', 'Z': 'З'
+    'Y': 'Ы', 'Z': 'З', '\'' : 'ь', '#' : 'ъ'
 };
+
+const enSpecial = {
+    'Jo': 'Ё', 'Yo': 'Ё', 'Ju': 'Ю', 'Yu': 'Ю', 'Ja': 'Я', 'Ya': 'Я',
+    'Je': 'Э', 'Sh': 'Ш', 'Zh': 'Ж', 'Ch': 'Ч'
+};
+
+const enShh = ['shh', 'Shh', 'SHh', 'SHH'];
+
+(function () {
+    for (let key in enSpecial) {
+        enSpecial[key.toLowerCase()] = enSpecial[key].toLowerCase();
+        enSpecial[key.toUpperCase()] = enSpecial[key].toUpperCase();
+    }
+})();
 
 (function () {
     for (let key in en) {
@@ -39,8 +53,10 @@ class Translitartor extends Transform {
         super(options);
         if (lang === 'en') {
             this.dictionary = en;
-        } else {
+            this.dictionaryName = 'en';
+        } else if (lang === 'rus') {
             this.dictionary = rus;
+            this.dictionaryName = 'rus';
         }
     }
 
@@ -48,8 +64,29 @@ class Translitartor extends Transform {
         let str = chunk.toString('utf-8');
         let formatted = '';
         for (let i = 0; i < str.length; i++) {
+            if (!this.dictionary) {
+                if (str[i] in rus) {
+                    this.dictionary = rus;
+                    this.dictionaryName = 'rus';
+                } else if (str[i] in en) {
+                    this.dictionary = en;
+                    this.dictionaryName = 'en';
+                }
+            }
             if (str[i] in this.dictionary) {
-                formatted += this.dictionary[str[i]];
+                if (this.dictionaryName === 'en') {
+                    if (enShh.indexOf(str[i] + str[i + 1] + str[i + 2])) {
+                        formatted += (str[i] === 's') ? 'щ' : 'Щ';
+                        i += 2;
+                    } else {
+                        if ((str[i] + str[i + 1]) in enSpecial) {
+                            formatted += this.dictionary[str[i] + str[i + 1]];
+                            i += 1;
+                        }
+                    }
+                } else {
+                    formatted += this.dictionary[str[i]];
+                }
             } else {
                 formatted += str[i];
             }
