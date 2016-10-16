@@ -115,7 +115,6 @@ class TransliterationStream extends Transform {
     }
 }
 
-
 const express = require('express');
 const app = express();
 
@@ -136,11 +135,13 @@ function startTimeLogging(req, res, next) {
 function authorize(req, res, next) {
     var cookieStrings = req.headers.cookie;
     if (!cookieStrings) {
-        next(new Error('Unauthorized'));
+        res.status(403);
+        res.locals.status = 403;
+        next(new Error('Forbidden'));
         return;
     }
     cookieStrings = cookieStrings.split(';');
-    cookies = {};
+    var cookies = {};
     for (var i in cookieStrings) {
         var cookie = cookieStrings[i].trim();
         var splitIndex = cookie.indexOf('=');
@@ -149,26 +150,77 @@ function authorize(req, res, next) {
     if (cookies['authorize']) {
         next();
     } else {
-        next(new Error('Unauthorized'));
+        res.status(403);
+        res.locals.status = 403;
+        next(new Error('Forbidden'));
     }
+    // next();
 }
 
 function logRequestMethod(req, res, next) {
-    if (!res.locals) {
-        res.locals = {};
-    }
     let request = req.method + ' ' + req.originalUrl;
     res.append('X-Request-Url', request);
     console.log('New request: ' + request);
     next();
 }
 
-function handleError(error, req, res, next){
-    if (!res.locals) {
-        res.locals = {};
+var fs = require('fs');
+function readPath(req, res, next) {
+    var path = req.originalUrl;
+    if (path.slice(0, 4) !== '/v1/') {
+        res.status(503);
+        res.locals.status = 503;
+        next(new Error('Wrong url'));
+        return;
     }
+    if (path.slice(0, 3) == '../' || path.indexOf('/../') != -1) {
+        res.status(503);
+        res.locals.status = 503;
+        next(new Error('No access to upper dir'));
+        return;
+    }
+    path = './' + path.slice(4, path.length); //TODO: check if it is ok
+
+    var fileStats = fs.statSync(path); //TODO: check if the path is absolute
+    if (fileStats.isDirectory()) {
+        var files = fs.readdirSync(path);
+        files.push('.');
+        files.push('..');
+        var response = {};
+        response.content = files;
+        res.locals.result = response;
+        res.status(200);
+        res.locals.status = 200;
+        next();
+    } else if (fileStats.isFile()){
+        var input = fs.createReadStream(path);
+        var transform = new TransliterationStream();
+        res.locals.result = '';
+        transform.on('data', (function(chunk) {
+            this.locals.result += chunk.toString('utf8');
+        }).bind(res));
+        transform.on('finish', (function(next, chunk){
+            console.log('Result: ' + this.locals.result);
+            this.locals.result = {'content': this.locals.result};
+            this.status(200);
+            this.locals.status = 200;
+            next();
+        }).bind(res, next));
+        input.pipe(transform).read();
+    } else {
+        next(new Error('No such file or directory'));
+    }
+}
+
+function handleError(error, req, res, next){
     res.locals.error = error;
-    res.status(403); //just for authorization error. For other errors the code may be different
+    if (res.locals.status == 503) {
+        res.append('X-Request-Error', 'Unknown request');
+    } else if (res.locals.status != 403) {
+        res.append('X-Request-Error', error.toString());
+        res.status(503);
+    }
+    console.error(error.toString());
     next();
 }
 
@@ -181,8 +233,8 @@ function endTimeLogging(req, res, next) {
 }
 
 function resolve(req, res) {
-    if (res.locals && res.locals.error) {
-        res.send(res.locals.error.toString());
+    if (res.locals && res.locals.result) {
+        res.send(res.locals.result);
     } else {
         res.send();
     }
@@ -191,23 +243,11 @@ function resolve(req, res) {
 app.use(startTimeLogging);
 app.use(logRequestMethod);
 app.use(authorize);
+app.use(readPath);
 app.use(handleError);
 app.use(endTimeLogging);
 app.use(resolve);
 
-
-//just for testing. will be moved to special function later
-var fs = require('fs');
-var input = fs.createReadStream('/home/prefx/projects/part-1-task-3/files/file.multi.txt');
-var transform = new TransliterationStream();
-var result = '';
-transform.on('data', function (chunk) {
-    result += chunk.toString('utf8');
-});
-transform.on('finish', function (chunk) {
-    console.log(result);
-});
-input.pipe(transform).read();
 
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
