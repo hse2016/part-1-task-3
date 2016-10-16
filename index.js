@@ -53,7 +53,8 @@ let findInObject = function(key, arr) {
   return null;
 };
 
-let transliterateToEnglish = function(text) {
+let transliterateToEnglish = function(buffer) {
+  let text = buffer.toString('utf-8');
   let res = '';
 
   for (let i = 0; i < text.length; ++i) {
@@ -74,7 +75,20 @@ let transliterateToEnglish = function(text) {
   return res;
 };
 
-let transliterateToRussian = function(text) {
+let transliterateToRussian = function(buffer) {
+  let text = buffer.toString('utf-8');
+  // text.replace('Zh', 'Ж');
+  // text.replace('Shh', 'Щ');
+  // text.replace('Sh', 'Ш');
+  // text.replace('Je', 'Э');
+  // text.replace('Ju', 'Ю');
+  // text.replace('Ja', 'Я');
+  // text.replace('zh', 'ж');
+  // text.replace('shh', 'Щ');
+  // text.replace('sh', 'ш');
+  // text.replace('je', 'э');
+  // text.replace('ju', 'ю');
+  // text.replace('ja', 'я');
   let res = '';
 
   for (let i = 0; i < text.length; ++i) {
@@ -95,26 +109,6 @@ let transliterateToRussian = function(text) {
   return res;
 };
 
-let isEnglishLanguage = function(data) {
-  for (let i = 0; i < data.length; ++i) {
-    if (findInObject(data[i], TRANSLITERATION_MAP_TO_RUSSIAN) !== null) {
-      return true;
-    }
-  }
-
-  return false;
-};
-
-let isRussianLanguage = function(data) {
-  for (let i = 0; i < data.length; ++i) {
-    if (findInObject(data[i], TRANSLITERATION_MAP_TO_ENGLISH) !== null) {
-      return true;
-    }
-  }
-
-  return false;
-};
-
 class TransformTransliterateToEnglish extends Transform {
   constructor(options) {
     super(options);
@@ -122,7 +116,7 @@ class TransformTransliterateToEnglish extends Transform {
   }
 
   _transform(data, encoding, callback) {
-    let transformed = transliterateToEnglish(data.toString('utf8'));
+    let transformed = transliterateToEnglish(data);
 
     if (transformed === null) {
       this.__state = STATE_MULTIPLE_LANGUAGE;
@@ -147,7 +141,7 @@ class TransformTransliterateToRussian extends Transform {
   }
 
   _transform(data, encoding, callback) {
-    let transformed = transliterateToRussian(data.toString('utf8'));
+    let transformed = transliterateToRussian(data);
 
     if (transformed === null) {
       this.__state = STATE_MULTIPLE_LANGUAGE;
@@ -296,18 +290,20 @@ let createFileSeekerMiddleware = function() {
             return next();
           }
 
+          let text = data.toString('utf-8');
           let readStream = fs.createReadStream(fullpath);
           let transformerStream = null;
           let transformed = "";
-          for (let i = 0; i < data.length; ++i) {
-            if (findInObject(data[i], TRANSLITERATION_MAP_TO_ENGLISH)) {
+          for (let i = 0; i < text.length; ++i) {
+            if (findInObject(text[i], TRANSLITERATION_MAP_TO_ENGLISH)) {
               transformerStream = new TransformTransliterateToEnglish();
               break;
-            } else if(findInObject(data[i], TRANSLITERATION_MAP_TO_RUSSIAN)) {
+            } else if(findInObject(text[i], TRANSLITERATION_MAP_TO_RUSSIAN)) {
               transformerStream = new TransformTransliterateToRussian();
               break;
             }
           }
+
           if (transformerStream === null) {
             transformerStream = new TransformTransliterateToRussian();
           }
@@ -318,7 +314,9 @@ let createFileSeekerMiddleware = function() {
           transformerStream.on('end', () => {
             if (transformerStream.isOK()) {
               res.header('transfer-encoding', 'chunked');
-              res.end({'content': transformed}.toString());
+              res.header('Content-Type', 'text/plain;charset=utf-8'); // for encoding
+              let obj = JSON.stringify({'content': transformed});
+              res.end(obj);
             } else {
               res.status(503);
               res.end();
@@ -335,7 +333,6 @@ let createFileSeekerMiddleware = function() {
 
           files.push('.');
           files.push('..');
-          console.log('send');
           sendContent(res, "[" + files.join(", ") + "]");
         });
       } else {
@@ -353,8 +350,6 @@ let createNotFoundMiddleware = function() {
 
 let createErrorMiddleware = function() {
   return function(err, request, resolve, next) {
-    console.log('error');
-    console.log(err);
     let code = err.code || 503;
     let message = err.message || 'Internal server error';
     resolve.status(code).header('x-request-error', message);
@@ -371,7 +366,7 @@ let createErrorMiddleware = function() {
 
 // middlewares
 app.use(createTimeLoggerBegin(timeHolder));
-app.use(createCookieChecker());
+// app.use(createCookieChecker());
 app.use(createPayload());
 app.use(createHeaderLogger());
 app.use(createTimeLoggerEnd(timeHolder));
