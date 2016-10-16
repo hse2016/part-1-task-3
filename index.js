@@ -217,7 +217,6 @@ app.use(function (req, res, next) {
         status: 404,
         message: 'Unknown request'
     };
-    console.error(err);
     res.set('X-Request-Error', err.message);
     res.status(err.status).send(err.message);
 });
