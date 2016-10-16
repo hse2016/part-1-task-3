@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('fs');
+const path = require('path');
 const Transform = require('stream').Transform;
 const express = require('express');
 const app = express();
@@ -9,10 +10,15 @@ const PORT = process.env.PORT || 4000;
 
 // some constants
 const IMAGE_ERROR_403 = 'http://t01.deviantart.net/LGMEna-IVYL1FNjkW8pAc7oJc1s=/fit-in/150x150/filters:no_upscale():origin()/pre09/2ee3/th/pre/f/2011/162/f/b/403_error_tan___uncolored_by_foxhead128-d3io641.png';
+const IMAGE_ERROR_503 = 'http://t01.deviantart.net/LGMEna-IVYL1FNjkW8pAc7oJc1s=/fit-in/150x150/filters:no_upscale():origin()/pre09/2ee3/th/pre/f/2011/162/f/b/403_error_tan___uncolored_by_foxhead128-d3io641.png';
 const MESSAGE_ERROR_403 = 'Forbidden';
 
 const STATE_OK = 0;
 const STATE_MULTIPLE_LANGUAGE = 1;
+
+const FILETYPE_RU = 0;
+const FILETYPE_EN = 1;
+const FILETYPE_UNKNOWN = 2;
 
 const TRANSLITERATION_MAP_TO_ENGLISH = {
   'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Jo', 'Ж': 'Zh',
@@ -161,7 +167,7 @@ class TransformTransliterateToRussian extends Transform {
 
 // sends page through response. If msg is not null, then adds it.
 // If src is not null, then adds an image with that src.
-let sendPage = function(response, statusCode, msg, src) {
+let sendPage = function(response, msg, src) {
   let html = '<!DOCTYPE html>\n' +
     '<html lang="en">\n' +
     '<head>\n' +
@@ -181,14 +187,15 @@ let sendPage = function(response, statusCode, msg, src) {
   html += '</body>\n' +
     '</html>\n';
 
-  response
-    .status(statusCode)
-    .send(html)
-    .end();
+  response.send(html);
 };
 
-let sendError403 = function(response) {
-  sendPage(response, 403, MESSAGE_ERROR_403, IMAGE_ERROR_403);
+let sendErrorPage403 = function(response) {
+  sendPage(response, MESSAGE_ERROR_403, IMAGE_ERROR_403);
+};
+
+let sendContent = function(res, content) {
+  res.send({'content': content});
 };
 
 let getCookie = function(request) {
@@ -223,8 +230,7 @@ let createCookieChecker = function() {
 
     // if not authorized, then error
     if ((cookie === null) || (! isAuthorized(cookie))) {
-      sendError403(response);
-      return;
+      throw {code: 403, message: "Not authorized"};
     }
 
     // authorized
@@ -261,24 +267,9 @@ let createTimeLoggerEnd = function(holder) {
 
 let createHeaderLogger = function() {
   return function(request, resolve, next) {
-    let res = request.method + ' ' + request.originalUrl;
-    console.log(res);
-    resolve.header('X-Request-Url', res);
-    next();
-  };
-};
-
-let createNotFoundMiddleware = function() {
-  return function(request, resolve, next) {
-    console.error("Unknown request");
-    resolve.status(503).header('x-request-error', "Unknown request").end();
-  };
-};
-
-let createErrorMiddleware = function() {
-  return function(err, request, resolve, next) {
-    console.error(err);
-    resolve.status(503).header('x-request-error', err).end();
+    let requestURL = request.method + ' ' + request.originalUrl;
+    console.log(requestURL);
+    resolve.header('X-Request-Url', requestURL);
     next();
   };
 };
@@ -286,72 +277,109 @@ let createErrorMiddleware = function() {
 let createFileSeekerMiddleware = function() {
   return function(req, res, next) {
     let originalUrl = req.originalUrl;
-    // kostil
-    let path = __dirname + "/files" + originalUrl.substr(3);
-    console.log(path);
-    fs.stat(path, function(err, stats) {
+    let dir = __dirname;
+    let fullpath = path.join(dir, originalUrl.substr(3));
+    fullpath = path.normalize(fullpath);
+
+    if (fullpath.indexOf(dir) !== 0) {
+      throw {error: "Attempt to dir parent dir"};
+    }
+
+    fs.stat(fullpath, function(err, stats) {
       if (err) {
         return next();
       }
 
       if (stats.isFile()) {
-        let fileStream = fs.createReadStream(path);
-
-        let russianData = "";
-        let englishData = "";
-
-        let transliterateToRussianStream = new TransformTransliterateToRussian();
-        transliterateToRussianStream.on('data', (chunk) => {
-          russianData += chunk.toString('utf-8');
-        });
-        transliterateToRussianStream.on('end', (chunk) => {
-          if (transliterateToRussianStream.isOK()) {
-            res.send(russianData);
+        fs.readFile(fullpath, function(err, data) {
+          if (err) {
+            return next();
           }
-        });
-        let transliterateToEnglishStream = new TransformTransliterateToEnglish();
-        transliterateToEnglishStream.on('data', (chunk) => {
-          englishData += chunk.toString('utf-8');
-        });
-        transliterateToEnglishStream.on('end', (chunk) => {
-          if (transliterateToEnglishStream.isOK()) {
-            res.send(englishData);
-          }
-        });
 
-        fileStream.pipe(transliterateToRussianStream);
-        fileStream.pipe(transliterateToEnglishStream);
+          let readStream = fs.createReadStream(fullpath);
+          let transformerStream = null;
+          let transformed = "";
+          for (let i = 0; i < data.length; ++i) {
+            if (findInObject(data[i], TRANSLITERATION_MAP_TO_ENGLISH)) {
+              transformerStream = new TransformTransliterateToEnglish();
+              break;
+            } else if(findInObject(data[i], TRANSLITERATION_MAP_TO_RUSSIAN)) {
+              transformerStream = new TransformTransliterateToRussian();
+              break;
+            }
+          }
+          if (transformerStream === null) {
+            transformerStream = new TransformTransliterateToRussian();
+          }
+          readStream.pipe(transformerStream);
+          transformerStream.on('data', (chunk) => {
+            transformed += chunk.toString('utf-8');
+          });
+          transformerStream.on('end', () => {
+            if (transformerStream.isOK()) {
+              res.header('transfer-encoding', 'chunked');
+              res.end({'content': transformed}.toString());
+            } else {
+              res.status(503);
+              res.end();
+            }
+          });
+        });
+        let fileStream = fs.createReadStream(fullpath);
 
       } else if (stats.isDirectory()) {
-        fs.readdir(path, function(err, files) {
+        fs.readdir(fullpath, function(err, files) {
           if (err) {
-            next();
+            return next();
           }
 
-          res.end("[" + files.join(", ") + "]");
+          files.push('.');
+          files.push('..');
+          console.log('send');
+          sendContent(res, "[" + files.join(", ") + "]");
         });
       } else {
-        return next();
+        throw {"error": 'beda'};
       }
     });
   };
 };
 
+let createNotFoundMiddleware = function() {
+  return function(request, resolve, next) {
+    throw {code: 503, message: "Unknown request"};
+  };
+};
+
+let createErrorMiddleware = function() {
+  return function(err, request, resolve, next) {
+    console.log('error');
+    console.log(err);
+    let code = err.code || 503;
+    let message = err.message || 'Internal server error';
+    resolve.status(code).header('x-request-error', message);
+    switch (code) {
+      case 403:
+        sendErrorPage403(resolve);
+        break;
+      default:
+        break;
+    }
+    resolve.end();
+  };
+};
 
 // middlewares
 app.use(createTimeLoggerBegin(timeHolder));
-// app.use(createCookieChecker());
+app.use(createCookieChecker());
 app.use(createPayload());
 app.use(createHeaderLogger());
 app.use(createTimeLoggerEnd(timeHolder));
-app.use(createErrorMiddleware());
-
-app.get('/v1', function(req, res) {
-  res.send('hoi');
-});
 
 app.use('/v1', createFileSeekerMiddleware());
 app.use('/', createNotFoundMiddleware());
+
+app.use(createErrorMiddleware());
 
 app.listen(PORT, function () {
     console.log(`App is listen on ${PORT}`);
@@ -360,8 +388,4 @@ app.listen(PORT, function () {
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
 
-// let t1 = new TransformTransliterateToEnglish();
-// let t2 = new TransformTransliterateToRussian();
-
-// process.stdin.pipe(t1).pipe(t2).pipe(process.stdout);
 // vim: foldmethod=indent foldnestmax=1
