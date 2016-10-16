@@ -366,7 +366,7 @@ let createErrorMiddleware = function() {
 
 // middlewares
 app.use(createTimeLoggerBegin(timeHolder));
-// app.use(createCookieChecker());
+app.use(createCookieChecker());
 app.use(createPayload());
 app.use(createHeaderLogger());
 app.use(createTimeLoggerEnd(timeHolder));
