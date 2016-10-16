@@ -51,7 +51,9 @@ app.use((request, response, next) => {
 
 // just display hello world
 app.get('*', (request, response, next) => {
-    fs.readdir(__dirname + request.url.substring(3), (err, files) => {
+    var filePath = __dirname + request.url.substring(4);
+    fs.readdir(filePath, (err, files) => {
+        if (fs.lstatSync(path_string).isDirectory()) ;
         var upperDirectories = __dirname.split("/");
         let dirname = upperDirectories[upperDirectories.length - 1];
 
