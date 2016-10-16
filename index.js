@@ -58,15 +58,59 @@ class TransliterationStream extends Transform {
                 for (var index = 0; index < str.length; index++) {
                     if (this.dict.russians.indexOf(str[index]) != -1) {
                         result += this.dict.toLatin[str[index]];
+                    } else {
+                        result += str[index];
                     }
                 }
             } else if (targetLanguage == 'russian') {
-                //TODO
+                var index = 0;
+                while (index < str.length - 2) {
+                    if (this.dict.latins.indexOf(str.slice(index, index+3)) != -1) {
+                        result += this.dict.toRussian[str.slice(index, index+3)];
+                        index += 3;
+                    } else if (this.dict.latins.indexOf(str.slice(index, index+2)) != -1) {
+                        result += this.dict.toRussian[str.slice(index, index+2)];
+                        index += 2;
+                    } else if (this.dict.latins.indexOf(str[index]) != -1) {
+                        result += this.dict.toRussian[str[index]];
+                        index += 1;
+                    } else {
+                        result += str[index];
+                        index += 1;
+                    }
+                }
+                this.stringBuffer = str.slice(index, str.length);
             }
             this.push(result);
         } else {
             this.push(str);
         }
+        callback();
+    }
+
+    _flush(callback) {
+        var index = 0;
+        var result = '';
+        var str = this.stringBuffer;
+        if (targetLanguage == 'russian') {
+            if (this.dict.latins.indexOf(str.slice(index, index+2)) != -1) {
+                result += this.dict.toRussian[str.slice(index, index+2)];
+                index += 2;
+            } else if (this.dict.latins.indexOf(str[index]) != -1) {
+                result += this.dict.toRussian[str[index]];
+                index += 1;
+                if (this.dict.latins.indexOf(str[index]) != -1) {
+                    result += this.dict.toRussian[str[index]];
+                    index += 1;
+                } else {
+                    result += str[index];
+                }
+            } else {
+                result += str[index];
+                result += str[index+1];
+            }
+        }
+        this.push(result);
         callback();
     }
 }
