@@ -56,5 +56,11 @@ app.use((req, res, next) => {
     next();
 });
 
+app.use((err, req, res, next) => {
+    console.error('X-Request-Error:', err.toString());
+    res.sedHeader('X-Request-Error:', err.toString());
+    res.end();
+});
+
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
