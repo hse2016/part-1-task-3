@@ -2,6 +2,18 @@
 
 const express = require('express');
 const app = express();
+const Transform = require('stream').Transform;
+
+class Translitartor extends Transform {
+    constructor(options) {
+        super(options);
+    }
+
+    _transform(chunk, encoding, callback) {
+        
+    }
+}
+
 
 const PORT = process.env.PORT || 4000;
 
@@ -42,15 +54,20 @@ app.use(function (req, res, next) {
 //Check auth middleware
 app.use(function (req, res, next) {
     if (!req.cookies.authorize) {
-        next({
+        throw {
             status : 403,
             message : 'User unauthorized'
-        });
+        };
     }
     next();
 });
 
-
+app.get('/', function (req, res, next) {
+    throw {
+        status : 503,
+        message : 'Unknown request'
+    }
+});
 
 //------------Log Timer-------------
 
@@ -65,7 +82,7 @@ app.use(function (req, res, next) {
 
 //-----------Routes-----------------
 
-app.get('/v1', function (req, res) {
+app.get('/v1/', function (req, res) {
     res.sendStatus(200);
 });
 
@@ -73,11 +90,20 @@ app.get('/v1', function (req, res) {
 
 app.use(function(err, req, res, next) {
     if (err) {
+        console.error(err);
+        res.set('X-Request-Error', err.message);
         res.status(err.status).send(err.message);
-    } else {
-        res.status(500).send('Something broke!');
     }
+});
 
+app.use(function(req, res, next) {
+    let err = {
+        status : 404,
+        message : 'Unknown request'
+    };
+    console.error(err);
+    res.set('X-Request-Error', err.message);
+    res.status(err.status).send(err.message);
 });
 
 // IMPORTANT. Это строка должна возвращать инстанс сервера
