@@ -134,7 +134,23 @@ function startTimeLogging(req, res, next) {
 }
 
 function authorize(req, res, next) {
-    next();
+    var cookieStrings = req.headers.cookie;
+    if (!cookieStrings) {
+        next(new Error('Unauthorized'));
+        return;
+    }
+    cookieStrings = cookieStrings.split(';');
+    cookies = {};
+    for (var i in cookieStrings) {
+        var cookie = cookieStrings[i];
+        var splitIndex = cookie.indexOf('=');
+        cookies[cookie.slice(0, splitIndex)] = cookie.slice(splitIndex+1, cookie.length);
+    }
+    if (cookies['authorize']) {
+        next();
+    } else {
+        next(new Error('Unauthorized'));
+    }
 }
 
 function logRequestMethod(req, res, next) {
