@@ -26,15 +26,12 @@ const TRANSLITERATION_MAP_TO_ENGLISH = {
 };
 
 const TRANSLITERATION_MAP_TO_RUSSIAN = {
-  'A': 'А', 'B': 'Б', 'V': 'В', 'G': 'Г', 'D': 'Д', 'E': 'Е', 'Jo': 'Ё', 'Zh': 'Ж',
-  'Z': 'З', 'I': 'И', 'J': 'Й', 'K': 'К', 'L': 'Л', 'M': 'М', 'N': 'Н', 'O': 'О',
-  'P': 'П', 'R': 'Р', 'S': 'С', 'T': 'Т', 'U': 'У', 'F': 'Ф', 'H': 'Х', 'C': 'Ц',
-  'Ch': 'Ч', 'Sh': 'Ш', 'Shh': 'Щ', 'Y': 'Ы', 'Je': 'Э',
-  'Ju': 'Ю', 'Ja': 'Я', 'W': 'Щ', 'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д',
-  'e': 'е', 'jo': 'ё', 'zh': 'ж', 'z': 'з', 'i': 'и', 'j': 'й', 'k': 'к',
-  'l': 'л', 'm': 'м', 'n': 'н', 'o': 'о', 'p': 'п', 'r': 'р', 's': 'с',
-  't': 'т', 'u': 'у', 'f': 'ф', 'h': 'х', 'c': 'ц', 'ch': 'ч', 'sh': 'ш',
-  'shh': 'щ', '#': 'ъ', 'y': 'ы', '\'': 'ь', 'je': 'э', 'ju': 'ю', 'ja': 'я', 'w': 'щ'
+  'A': 'А', 'B': 'Б', 'V': 'В', 'G': 'Г', 'D': 'Д', 'E': 'Е', 'Z': 'З', 'I': 'И', 'J': 'Й',
+  'K': 'К', 'L': 'Л', 'M': 'М', 'N': 'Н', 'O': 'О', 'P': 'П', 'R': 'Р', 'S': 'С', 'T': 'Т',
+  'U': 'У', 'F': 'Ф', 'H': 'Х', 'C': 'Ц', 'Y': 'Ы', 'W': 'Щ', 'a': 'а', 'b': 'б', 'v': 'в',
+  'g': 'г', 'd': 'д', 'e': 'е', 'z': 'з', 'i': 'и', 'j': 'й', 'k': 'к', 'l': 'л', 'm': 'м',
+  'n': 'н', 'o': 'о', 'p': 'п', 'r': 'р', 's': 'с', 't': 'т', 'u': 'у', 'f': 'ф', 'h': 'х',
+  'c': 'ц', '#': 'ъ', 'y': 'ы', "'": 'ь', 'w': 'щ'
 };
 
 let findInObject = function(key, arr) {
@@ -124,8 +121,25 @@ class TransformTransliterateToRussian extends Transform {
 
   _transform(data, encoding, callback) {
     let text = data.toString('utf-8');
+
+    text = text.replace(/Shh/g, 'Щ');
+    text = text.replace(/Sh/g, 'Ш');
+    text = text.replace(/Zh/g, 'Ж');
     text = text.replace(/Ch/g, 'Ч');
+    text = text.replace(/Ja/g, 'Я');
+    text = text.replace(/Jo/g, 'Ё');
+    text = text.replace(/Ju/g, 'Ю');
+    text = text.replace(/Je/g, 'Э');
+
+    text = text.replace(/shh/g, 'щ');
+    text = text.replace(/sh/g, 'ш');
+    text = text.replace(/zh/g, 'ж');
     text = text.replace(/ch/g, 'ч');
+    text = text.replace(/ja/g, 'я');
+    text = text.replace(/jo/g, 'ё');
+    text = text.replace(/ju/g, 'ю');
+    text = text.replace(/je/g, 'э');
+
     this.doMagic(text);
     callback();
   }
