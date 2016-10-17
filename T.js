@@ -96,8 +96,6 @@ class T extends Transform {
                 this.translits = T.translitsEN;
                 this.defined = true;
 
-            } else if (not_rus && not_en) {
-                new_str = str;
             }
         }
 
@@ -116,22 +114,25 @@ class T extends Transform {
             }
 
             for (let i in T.additionalEn) {
-                // str = str.split(i).join(T.additionalEn[i]);
                 str = str.replace(new RegExp(i, 'g'), T.additionalEn[i]);
             }
 
-            var new_str = '';
-            for (var i in str) {
-                var char = this.translits[str[i]];
-                if (char) {
-                    new_str += char;
-                } else {
-                    new_str += str[i];
-                }
+            for (let i in this.translits) {
+                str = str.replace(new RegExp(i, 'g'), this.translits[i]);
             }
+
+            // var new_str = '';
+            // for (var i in str) {
+            //     var char = this.translits[str[i]];
+            //     if (char) {
+            //         new_str += char;
+            //     } else {
+            //         new_str += str[i];
+            //     }
+            // }
         }
 
-        return new_str;
+        return str;
     }
 
     _flush(callback) {
