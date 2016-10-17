@@ -9,7 +9,6 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // some constants
-const CHUNK_LENGTH = 32768;
 const IMAGE_ERROR_403 = 'http://t01.deviantart.net/LGMEna-IVYL1FNjkW8pAc7oJc1s=/fit-in/150x150/filters:no_upscale():origin()/pre09/2ee3/th/pre/f/2011/162/f/b/403_error_tan___uncolored_by_foxhead128-d3io641.png';
 const MESSAGE_ERROR_403 = 'Forbidden';
 
@@ -37,29 +36,30 @@ const TRANSLITERATION_MAP_TO_RUSSIAN = {
   'shh': 'щ', '#': 'ъ', 'y': 'ы', '\'': 'ь', 'je': 'э', 'ju': 'ю', 'ja': 'я', 'w': 'щ'
 };
 
-let findInObject = function(key, arr) {
-  for (let k in arr) {
-    if (k === key) {
-      return arr[k];
-    }
+class TransformTransliterator extends Transform {
+  constructor(options) {
+    super(options);
+    this._current = '';
+    this._isRussian = false;
+    this._isEnglish = false;
+    this._map = null;
+    this._pre = false;
+    this._post = false;
   }
-  return null;
-};
 
-let doMagicCreator = function(ref) {
-  return function(s) {
+  _doMagic(text) {
     let prev;
     let flag;
     let saved;
     let rrr = false;
     let res = '';
-    for (let i = 0; i < s.length; ++i) {
-      prev = ref.current;
-      ref.current += s[i];
+    for (let i = 0; i < text.length; ++i) {
+      prev = this._current;
+      this._current += text[i];
 
       flag = false;
-      for (var item in ref.map) {
-        if (item.indexOf(ref.current) === 0) {
+      for (var item in this._map) {
+        if (item.indexOf(this._current) === 0) {
           flag = true;
           break;
         }
@@ -67,64 +67,118 @@ let doMagicCreator = function(ref) {
 
       if (!flag) {
         saved = null;
-        for (let item in ref.map) {
+        for (let item in this._map) {
           if (item === prev) {
             saved = item;
           }
         }
         if (saved !== null) {
-          res += ref.map[saved];
+          res += this._map[saved];
         } else {
           res += prev;
         }
         prev = '';
-        ref.current = s[i];
+        this._current = text[i];
       }
     }
 
     saved = null;
-    for (let item in ref.map) {
-      if (item.indexOf(ref.current) === 0) {
+    for (let item in this._map) {
+      if (item.indexOf(this._current) === 0) {
         saved = item;
       }
     }
 
     if (saved === null) {
-      res += ref.current;
-      ref.current = '';
+      res += this._current;
+      this._current = '';
     }
 
-    ref.push(res);
-  };
-};
-
-class TransformTransliterateToEnglish extends Transform {
-  constructor(options) {
-    super(options);
-    this.current = '';
-    this.map = TRANSLITERATION_MAP_TO_ENGLISH;
-    this.doMagic = doMagicCreator(this);
+    return res;
   }
 
-  _transform(data, encoding, callback) {
-    let text = data.toString('utf-8');
-    this.doMagic(text);
+  _determineTargetLanguage(text) {
+    if ((! this._isRussian) && (! this._isEnglish)) {
+      this._isRussian = /[а-яА-Я]/.test(text);
+      // only one of the flags will be set
+      if (! this._isRussian) {
+        this._isEnglish = /[a-zA-Z]/.test(text);
+      }
+    }
+  }
 
+  _selectDictionary() {
+    if (this._isRussian) {
+      this._map = TRANSLITERATION_MAP_TO_ENGLISH;
+    } else if(this._isEnglish) {
+      this._map = TRANSLITERATION_MAP_TO_RUSSIAN;
+    }
+  }
+
+  _pushJSONPre() {
+    if (! this._pre) {
+      this.push('{"content": "');
+      this._pre = true;
+    }
+  }
+
+  _pushJSONPost() {
+    if (! this._post) {
+      this.push('"}');
+      this._post = true;
+    }
+  }
+
+  _transform(chunk, encoding, callback) {
+    let text = chunk.toString('utf-8');
+    let result;
+
+    // will not change language, if it was already determined
+    this._determineTargetLanguage(text);
+    this._selectDictionary();
+    this._pushJSONPre();
+
+    if (this._isRussian) {
+      result = this._transformToEnglish(text);
+    } else if(this._isEnglish) {
+      result = this._transformToRussian(text);
+    } else {
+      result = this._passUntransformed(text);
+    }
+
+    this.push(result.replace(/'/g, "\'"));
     callback();
   }
-}
 
-class TransformTransliterateToRussian extends Transform {
-  constructor(options) {
-    super(options);
-    this.current = '';
-    this.map = TRANSLITERATION_MAP_TO_RUSSIAN;
-    this.doMagic = doMagicCreator(this);
+  _flush(callback) {
+    if (this._isRussian || this._isEnglish) {
+      let nya = null;
+      let res = '';
+
+      for (let item in this._map) {
+        if (item === this._current) {
+          nya = item;
+        }
+      }
+
+      if (nya !== null) {
+        res += this._map[nya];
+      } else {
+        res += this._current;
+      }
+
+      this.push(res);
+    }
+
+    this._pushJSONPost();
+    callback();
   }
 
-  _transform(data, encoding, callback) {
-    let text = data.toString('utf-8');
+  _transformToEnglish(text) {
+    return this._doMagic(text);
+  }
 
+  _transformToRussian(text) {
     text = text.replace(/Shh/g, 'Щ');
     text = text.replace(/Sh/g, 'Ш');
     text = text.replace(/Zh/g, 'Ж');
@@ -143,8 +197,11 @@ class TransformTransliterateToRussian extends Transform {
     text = text.replace(/ju/g, 'ю');
     text = text.replace(/je/g, 'э');
 
-    this.doMagic(text);
-    callback();
+    return this._doMagic(text);
+  }
+
+  _passUntransformed(text) {
+    return text;
   }
 }
 
@@ -276,54 +333,13 @@ let createFileSeekerMiddleware = function() {
       }
 
       if (stats.isFile()) {
-        fs.readFile(fullpath, function(err, data) {
-          if (err) {
-            return next();
-          }
+        let transformerStream = new TransformTransliterator();
+        let transformed = '';
 
-          let text = data.toString('utf-8');
-          let fromEnglish = /[a-z]/i.test(text);
-          let fromRussian = /[а-я]/i.test(text);
+        let readStream = fs.createReadStream(fullpath);
 
-          let transformerStream = null;
-          let transformed = '';
-          if (fromRussian && fromEnglish) {
-            res.status(503);
-            res.end();
-            return;
-          } else if(fromRussian) {
-            transformerStream = new TransformTransliterateToEnglish();
-          } else {
-            transformerStream = new TransformTransliterateToRussian();
-          }
-
-          let readStream = fs.createReadStream(fullpath);
-
-          readStream.pipe(transformerStream);
-          transformerStream.on('data', (chunk) => {
-            transformed += chunk.toString('utf-8');
-          });
-          transformerStream.on('end', () => {
-            let nya = null;
-            for (var item in transformerStream.map) {
-              if (item === transformerStream.current) {
-                nya = item;
-              }
-            }
-
-            if (nya !== null) {
-              transformed += transformerStream.map[nya];
-            } else {
-              transformed += transformerStream.current;
-            }
-
-            res.header('transfer-encoding', 'chunked');
-            res.header('Content-Type', 'application/json'); // for encoding
-            let obj = JSON.stringify({'content': transformed });
-            res.end(obj);
-          });
-        });
-        let fileStream = fs.createReadStream(fullpath);
+        readStream.pipe(transformerStream).pipe(res);
+        res.header('Content-Type', 'application/json'); // for encoding
 
       } else if (stats.isDirectory()) {
         fs.readdir(fullpath, function(err, files) {
@@ -336,7 +352,7 @@ let createFileSeekerMiddleware = function() {
           sendContent(res, "[" + files.join(", ") + "]");
         });
       } else {
-        throw {"error": 'beda'};
+        throw {"error": 'Path doesn\'t depends on file nor dir'};
       }
     });
   };
@@ -357,8 +373,6 @@ let createErrorMiddleware = function() {
       case 403:
         sendErrorPage403(resolve);
         break;
-      default:
-        break;
     }
     resolve.end();
   };
@@ -367,7 +381,6 @@ let createErrorMiddleware = function() {
 // middlewares
 app.use(createTimeLoggerBegin(timeHolder));
 app.use(createCookieChecker());
-// app.use(createPayload());
 app.use(createHeaderLogger());
 app.use(createTimeLoggerEnd(timeHolder));
 
