@@ -23,24 +23,13 @@ describe('Error middleware', () => {
             });
     });
 
-    it('multiple unknown request error', (done) => {
+    it('Unknown request error', (done) => {
         let url = '/incorrect';
         rq(app)
             .get(url)
             .set('Cookie', ['authorize=12345667'])
             .end((err, res) => {
                 res.headers[HEADER].should.eql('Unknown request');
-                done();
-            });
-    });
-
-    it.skip('multiple language error', (done) => {
-        let url = '/v1/files/file.multi.txt';
-        rq(app)
-            .get(url)
-            .set('Cookie', ['authorize=12345667'])
-            .end((err, res) => {
-                res.headers[HEADER].should.eql('Multiple language');
                 done();
             });
     });
