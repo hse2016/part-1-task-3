@@ -36,6 +36,14 @@ app.use((req, res, next) => {
     }
   });
 
+  app.use((req, res, next) => {
+    var time = process.hrtime(req.startAt);
+    time = (time[1] / 1000).toFixed(3);
+    res.setHeader('X-Time', time);
+    res.status(200);
+    next();
+});
+
 app.use(function(error, req, res, next){
     res.setHeader('X-Request-Error', error.toString());
     res.status(503).end();
