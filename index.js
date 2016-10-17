@@ -152,7 +152,7 @@ const engToRus_additional = {
     'YA': 'Я', 'JE': 'Э', 'SHH': 'Щ', 'SH': 'Ш', 'ZH': 'Ж',
     '#': 'ъ',
     'jo': 'ё', 'ju': 'ю', 'yo': 'ё', 'ch': 'ч',
-    'ya': 'я', 'je': 'э', 'shh': 'щ', 'sh': 'ш', 'zh': 'ж',
+    'ya': 'я', 'je': 'э', 'shh': 'щ', 'sh': 'ш', 'zh': 'ж', 'ja': 'я',
     'Jo': 'Ё', 'Ju': 'Ю', 'Yo': 'Ё', 'Ch': 'Ч',
     'Ya': 'Я', 'Je': 'Э', 'Shh': 'Щ', 'Sh': 'Ш', 'Zh': 'Ж'
 };
@@ -174,6 +174,8 @@ class MyTransform extends Transform {
         super(opt);
         this.isToRus = false;
         this.detected = false;
+        this.toNextChunk = '';
+        this.isFlushing = false;
     }
 
     _transform(chunk, encoding, callback) {
@@ -194,17 +196,62 @@ class MyTransform extends Transform {
         callback();
     }
 
-    translate(str, map, map_additional){
-        if (map_additional) {
-            for (let val in map_additional) {
-                str = str.replace(new RegExp(val,'g'), map_additional[val]);
+    _flush(callback) {
+        this.isFlushing = true;
+        let str = this.toNextChunk;
+        // console.log(str);
+        if (this.detected === true){
+            if (this.isToRus) {
+                str = this.translate(str, engToRus, engToRus_additional);
+            }
+            else {
+                str = this.translate(str, rusToEng);
             }
         }
+        // console.log(str);
+        this.push(str);
+        callback();
+    }
+    
+    moveLasts(str, map_additional) {
+        let last_ind = -1;
+        let value = '';
+        for (let val in map_additional) {
+            let ind = str.lastIndexOf(val);
+            if (ind > last_ind) {
+                last_ind = ind;
+                value = val;
+            }
+        }
+        if (last_ind > -1){
+            // console.log('befire slice', str, last_ind, str.length);
+            this.toNextChunk = str.slice(last_ind + value.length);
+            str = str.slice(0, last_ind + value.length);
+            // console.log('after slice ', str, this.toNextChunk);
+        }
+        return str;
+    }
+
+    translate(str, map, map_additional){
+        if (!this.isFlushing) {
+            str = this.toNextChunk + str;
+        }
+        this.toNextChunk = '';
+        if (map_additional && !this.isFlushing) {
+            // console.log('moveNext');
+            str = this.moveLasts(str, map_additional);
+            for (let val in map_additional) {
+                str = str.replace(new RegExp(val, 'g'), map_additional[val]);
+            }
+        }
+
         for (let val in map) {
+            // console.log('normal saerch', str);
             str = str.replace(new RegExp(val,'g'), map[val]);
         }
         return str;
     }
+
 
     detectLanguage(str){
         let eng = str.search(new RegExp('[a-z]', 'i'));
@@ -222,9 +269,9 @@ class MyTransform extends Transform {
 
 
 
-// const rq = require('supertest');
-// rq(app)
-//     .get('/v1/tmpGLAHsR/../file3742261894251766')
-//     .set('Cookie', ['authorize=12345667'])
-//     .expect(200)
-//     .end((err,res) => {console.log('finish')});
+const rq = require('supertest');
+rq(app)
+    .get('/v1/files/file.en.txt')
+    .set('Cookie', ['authorize=12345667'])
+    .expect(200)
+    .end((err,res) => {console.log('finish')});
