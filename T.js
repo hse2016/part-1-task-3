@@ -55,11 +55,31 @@ class T extends Transform {
         this.type = 'utf8';
         this.defined = false;
         this.translits = undefined;
-        this.lastChar = undefined
+        this.lastChars = '';
+        this.alreadyFlush = false;
     }
 
     setType(type) {
         this.type = type;
+    }
+
+    getStringAfterLastAdditionalChar(str) {
+
+        let max = -1;
+        let val = '';
+        for(let i in T.additionalEn) {
+            let ind = str.lastIndexOf(i);
+            if (ind > max) {
+                max = ind;
+                val = i;
+            }
+        }
+
+        if (max > -1){
+            this.lastChars = str.slice(max + val.length);
+            str = str.slice(0, max + val.length);
+        }
+        return str;
     }
 
     translit(str) {
@@ -76,10 +96,6 @@ class T extends Transform {
                 this.translits = T.translitsEN;
                 this.defined = true;
 
-                // for(let i in T.additionalEn) {
-                //     // str = str.split(i).join(T.additionalEn[i]);
-                //     str = str.replace(new RegExp(i, 'g'), T.additionalEn[i]);
-                // }
             } else if (not_rus && not_en) {
                 new_str = str;
             }
@@ -87,19 +103,15 @@ class T extends Transform {
 
         if (this.translits) {
 
+            // Только английские
             if(!this.translit['B']) {
-                // if (this.lastChar)
-                //     str = this.lastChar + str;
-                //
-                // // console.log(str)
-                //
-                // let last_char = str[str.length - 2] + str[str.length - 1];
-                // if (!T.additionalEn[last_char]) {
-                //     this.lastChar = str[str.length - 1];
-                //     str = str.slice(0, -1);
-                // } else {
-                //     this.lastChar = undefined;
-                // }
+
+                if (!this.flushing)
+                    str = this.lastChars + str;
+
+                this.lastChars = ''
+
+                str = this.getStringAfterLastAdditionalChar(str);
 
             }
 
@@ -107,8 +119,6 @@ class T extends Transform {
                 // str = str.split(i).join(T.additionalEn[i]);
                 str = str.replace(new RegExp(i, 'g'), T.additionalEn[i]);
             }
-
-            // console.log(str + '\n\n\n\n')
 
             var new_str = '';
             for (var i in str) {
@@ -124,6 +134,23 @@ class T extends Transform {
         return new_str;
     }
 
+    _flush(callback) {
+
+        this.flushing = true;
+        let str = this.lastChars;
+
+        if (this.type == 'base64') {
+            str = str.toString('base64');
+            this.push(str);
+        }
+        else {
+            str = str.toString('utf8');
+            let new_str = this.translit(str);
+            this.push(new_str);
+        }
+
+        callback();
+    }
 
     _transform(chunk, encoding, callback) {
 
