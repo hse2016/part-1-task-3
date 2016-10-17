@@ -124,6 +124,8 @@ class TransformTransliterateToRussian extends Transform {
 
   _transform(data, encoding, callback) {
     let text = data.toString('utf-8');
+    text = text.replace(/Ch/g, 'Ч');
+    text = text.replace(/ch/g, 'ч');
     this.doMagic(text);
     callback();
   }
