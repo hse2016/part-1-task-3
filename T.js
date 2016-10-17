@@ -111,10 +111,10 @@ class T extends Transform {
 
                 str = this.getStringAfterLastAdditionalChar(str);
 
-            }
+                for (let i in T.additionalEn) {
+                    str = str.replace(new RegExp(i, 'g'), T.additionalEn[i]);
+                }
 
-            for (let i in T.additionalEn) {
-                str = str.replace(new RegExp(i, 'g'), T.additionalEn[i]);
             }
 
             for (let i in this.translits) {
