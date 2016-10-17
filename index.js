@@ -52,6 +52,7 @@ let doMagicCreator = function(ref) {
     let flag;
     let saved;
     let rrr = false;
+    let res = '';
     for (let i = 0; i < s.length; ++i) {
       prev = ref.current;
       ref.current += s[i];
@@ -72,9 +73,9 @@ let doMagicCreator = function(ref) {
           }
         }
         if (saved !== null) {
-          this.push(ref.map[saved]);
+          res += ref.map[saved];
         } else {
-          this.push(prev);
+          res += prev;
         }
         prev = '';
         ref.current = s[i];
@@ -89,9 +90,11 @@ let doMagicCreator = function(ref) {
     }
 
     if (saved === null) {
-      this.push(ref.current);
+      res += ref.current;
       ref.current = '';
     }
+
+    ref.push(res);
   };
 };
 
@@ -260,26 +263,16 @@ let createFileSeekerMiddleware = function() {
           }
 
           let text = data.toString('utf-8');
-          let toRussian = false;
-          let toEnglish = false;
-
-          for (let i = 0; i < text.length; ++i) {
-            if (findInObject(text[i], TRANSLITERATION_MAP_TO_ENGLISH)) {
-              toRussian = true;
-            }
-
-            if (findInObject(text[i], TRANSLITERATION_MAP_TO_RUSSIAN)) {
-              toEnglish = true;
-            }
-          }
+          let fromEnglish = /[a-z]/i.test(text);
+          let fromRussian = /[а-я]/i.test(text);
 
           let transformerStream = null;
-          let transformed = [];
-          if (toRussian && toEnglish) {
+          let transformed = '';
+          if (fromRussian && fromEnglish) {
             res.status(503);
             res.end();
             return;
-          } else if(toRussian) {
+          } else if(fromRussian) {
             transformerStream = new TransformTransliterateToEnglish();
           } else {
             transformerStream = new TransformTransliterateToRussian();
@@ -289,7 +282,7 @@ let createFileSeekerMiddleware = function() {
 
           readStream.pipe(transformerStream);
           transformerStream.on('data', (chunk) => {
-            transformed.push(chunk.toString('utf-8'));
+            transformed += chunk.toString('utf-8');
           });
           transformerStream.on('end', () => {
             let nya = null;
@@ -300,14 +293,14 @@ let createFileSeekerMiddleware = function() {
             }
 
             if (nya !== null) {
-              transformed.push(transformerStream.map[nya]);
+              transformed += transformerStream.map[nya];
             } else {
-              transformed.push(transformerStream.current);
+              transformed += transformerStream.current;
             }
 
             res.header('transfer-encoding', 'chunked');
             res.header('Content-Type', 'application/json'); // for encoding
-            let obj = JSON.stringify({'content': transformed.join('')});
+            let obj = JSON.stringify({'content': transformed });
             res.end(obj);
           });
         });
@@ -355,7 +348,7 @@ let createErrorMiddleware = function() {
 // middlewares
 app.use(createTimeLoggerBegin(timeHolder));
 app.use(createCookieChecker());
-app.use(createPayload());
+// app.use(createPayload());
 app.use(createHeaderLogger());
 app.use(createTimeLoggerEnd(timeHolder));
 
