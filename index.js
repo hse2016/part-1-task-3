@@ -51,7 +51,6 @@ let doMagicCreator = function(ref) {
     let prev;
     let flag;
     let saved;
-    let res = '';
     let rrr = false;
     for (let i = 0; i < s.length; ++i) {
       prev = ref.current;
@@ -73,9 +72,9 @@ let doMagicCreator = function(ref) {
           }
         }
         if (saved !== null) {
-          res += ref.map[saved];
+          this.push(ref.map[saved]);
         } else {
-          res += prev;
+          this.push(prev);
         }
         prev = '';
         ref.current = s[i];
@@ -90,11 +89,9 @@ let doMagicCreator = function(ref) {
     }
 
     if (saved === null) {
-      res += ref.current;
+      this.push(ref.current);
       ref.current = '';
     }
-
-    return res;
   };
 };
 
@@ -108,7 +105,7 @@ class TransformTransliterateToEnglish extends Transform {
 
   _transform(data, encoding, callback) {
     let text = data.toString('utf-8');
-    this.push(this.doMagic(text));
+    this.doMagic(text);
 
     callback();
   }
@@ -124,7 +121,7 @@ class TransformTransliterateToRussian extends Transform {
 
   _transform(data, encoding, callback) {
     let text = data.toString('utf-8');
-    this.push(this.doMagic(text));
+    this.doMagic(text);
     callback();
   }
 }
@@ -277,7 +274,7 @@ let createFileSeekerMiddleware = function() {
           }
 
           let transformerStream = null;
-          let transformed = "";
+          let transformed = [];
           if (toRussian && toEnglish) {
             res.status(503);
             res.end();
@@ -292,7 +289,7 @@ let createFileSeekerMiddleware = function() {
 
           readStream.pipe(transformerStream);
           transformerStream.on('data', (chunk) => {
-            transformed += chunk.toString('utf-8');
+            transformed.push(chunk.toString('utf-8'));
           });
           transformerStream.on('end', () => {
             let nya = null;
@@ -303,14 +300,14 @@ let createFileSeekerMiddleware = function() {
             }
 
             if (nya !== null) {
-              transformed += transformerStream.map[nya];
+              transformed.push(transformerStream.map[nya]);
             } else {
-              transformed += transformerStream.current;
+              transformed.push(transformerStream.current);
             }
 
             res.header('transfer-encoding', 'chunked');
             res.header('Content-Type', 'application/json'); // for encoding
-            let obj = JSON.stringify({'content': transformed});
+            let obj = JSON.stringify({'content': transformed.join('')});
             res.end(obj);
           });
         });
