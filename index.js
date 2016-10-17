@@ -2,6 +2,7 @@
 
 const express = require('express');
 var fs = require('fs');
+var path = require('path');
 var Transform = require('stream').Transform;
 let T = require('./T');
 
@@ -21,15 +22,28 @@ app.listen(PORT, function () {
 });
 
 function transformStream(streamIn, streamOut, type = 'utf8') {
+    let s = '';
+
     var t = new T();
     t.setType(type);
-    streamIn.pipe(t).pipe(streamOut);
+    streamIn.pipe(t);
+
+    t.on('data', (chunk) => {
+        s += chunk.toString('utf-8');
+    });
+
+    t.on('end', () => {
+        streamOut.setHeader('Transfer-Encoding', 'chunked');
+        streamOut.setHeader('Content-Type', 'application/json');
+        streamOut.end(JSON.stringify( { content : s } ));
+    });
+
 }
 
 function catchRequestURL(res, req) {
     let req_url = req.method + " " + req.originalUrl;
     res.setHeader('X-Request-Url', req_url);
-    console.log('X-Request-Url: ' + req_url);
+    //console.log('X-Request-Url: ' + req_url);
 }
 
 function setRequestStartTime(req) {
@@ -40,7 +54,7 @@ function setRequestEndTime(res, req) {
     var duration = process.hrtime(req.startTime);
     var calc_duration = (duration[1] / 1000000).toFixed(3);
     res.setHeader('X-Time', calc_duration);
-    console.log('X-time: ' + calc_duration);
+    //console.log('X-time: ' + calc_duration);
 }
 
 function getRequestParamsArray(req) {
@@ -49,22 +63,21 @@ function getRequestParamsArray(req) {
     return params;
 }
 
-function readFileOrDir(params, res, type = 'utf8') {
-    let path = getPath(params);
+function readFileOrDir(req, res, type = 'utf8') {
+    path = getPath(req);
 
     if (fs.lstatSync(path).isDirectory()) {
 
         fs.readdir(path, function (err, items) {
 
-            console.log(items);
+            //console.log(items);
 
             let json_items = ['.', '..'] + items;
             res.status(200).send({'content': json_items});
         });
 
     } else if (fs.lstatSync(path).isFile()) {
-        res.setHeader('Content-Type', "application/json");
-        res.setHeader('transfer-encoding', "chunked");
+
         var stream = fs.createReadStream(path);
         transformStream(stream, res, type);
         // transformStream(stream, process.stdout, type);
@@ -80,7 +93,6 @@ app.use(function (req, res, next) {
     catchRequestURL(res, req);
     next();
 
-    // setTimeout(() => next(), 2);
 });
 
 app.use(function (req, res, next) {
@@ -102,33 +114,21 @@ app.use(function (req, res, next) {
 
 
 app.get('/v1/', function (req, res) {
-    readFileOrDir([], res);
+    readFileOrDir(req, res);
 });
 
 app.get('/base64/', function (req, res) {
-    readFileOrDir([], res, 'base64');
+    readFileOrDir(req, res, 'base64');
 });
 
 app.get('/base64/(:arr)*', function (req, res, next) {
-    var params = getRequestParamsArray(req);
-
-    if (params.indexOf("..") > -1) {
-        next(new Error('Access to upper dir'));
-    }
-
-    readFileOrDir(params, res, 'base64');
-
+    //var params = getRequestParamsArray(req);
+    readFileOrDir(req, res, 'base64');
 });
 
 app.get('/v1/(:arr)*', function (req, res, next) {
-    var params = getRequestParamsArray(req);
-
-    if (params.indexOf("..") > -1) {
-        next(new Error('Access to upper dir'));
-    }
-
-    readFileOrDir(params, res);
-
+    //var params = getRequestParamsArray(req);
+    readFileOrDir(req, res);
 });
 
 app.use(function (error, req, res, next) {
@@ -145,12 +145,20 @@ app.use(function (req, res, next) {
 module.exports = app;
 
 
-function getPath(route) {
-    var path = '';
-    route.forEach(function (i) {
-        path += '/' + i;
-    });
-    return '.' + path;
+function getPath(req) {
+    let path = '';
+    if (req.params[0] != undefined) {
+        path = req.params['arr'] + req.params[0];
+    }
+
+    if (path === '../') {
+        throw new Error(path);
+        return '';
+    }
+
+    path = path.replace(new RegExp('.+/\.\./', 'gi'), '');
+
+    return './' + path;
 }
 
 

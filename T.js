@@ -40,6 +40,9 @@ class T extends Transform {
             'Jo' : 'Ё', 'Ju' : 'Ю', 'Yo' : 'Ё', 'Ch' : 'Ч',
             'Ya' : 'Я', 'Je' : 'Э', 'Shh': 'Щ', 'Sh' : 'Ш', 'Zh' : 'Ж', 'Ja' : 'Я',
 
+            'JO' : 'Ё', 'JU' : 'Ю', 'YO' : 'Ё', 'CH' : 'Ч',
+            'YA' : 'Я', 'JE' : 'Э', 'SHH': 'Щ', 'SH' : 'Ш', 'ZH' : 'Ж', 'JA' : 'Я',
+
             'jo' : 'ё', 'ju' : 'ю', 'yo' : 'ё', 'ch' : 'ч',
             'ya' : 'я', 'je' : 'э', 'shh': 'щ', 'sh' : 'ш', 'zh' : 'ж', 'ja' : 'я'
         }
@@ -73,8 +76,12 @@ class T extends Transform {
                 this.defined = true;
 
                 for(let i in T.additionalEn) {
-                    str = str.split(i).join(T.additionalEn[i]);
+                    // str = str.split(i).join(T.additionalEn[i]);
+                    console.log(str.length)
+                    str = str.replace(new RegExp(i, 'g'), T.additionalEn[i]);
                 }
+            } else if(not_rus && not_en) {
+                new_str = str;
             }
         }
 
@@ -97,12 +104,12 @@ class T extends Transform {
 
         if (this.type == 'base64') {
             var str = chunk.toString('base64');
-            this.push(JSON.stringify({'content' : str }));
+            this.push(str);
         }
         else {
             var str = chunk.toString('utf8');
             let new_str = this.translit(str);
-            this.push(JSON.stringify({'content' : new_str}));
+            this.push(new_str);
         }
 
         callback();
