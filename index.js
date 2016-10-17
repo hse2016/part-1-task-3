@@ -61,8 +61,10 @@ function readFileOrDir(params, res, type = 'utf8') {
             let json_items = ['.', '..'] + items;
             res.status(200).send({'content': json_items});
         });
-    } else if (fs.lstatSync(path).isFile()) {
 
+    } else if (fs.lstatSync(path).isFile()) {
+        res.setHeader('Content-Type', "text/html");
+        res.setHeader('Transfer-Encoding', "chunked");
         var stream = fs.createReadStream(path);
         transformStream(stream, res, type);
         // transformStream(stream, process.stdout, type);
