@@ -19,12 +19,22 @@ app.listen(PORT, function () {
     console.log(`App is listen on ${PORT}`);
 });
 
-app.use(function getCookie() {
-  var matches = document.cookie.match(new RegExp(
+app.use((req, res, next) => {
+  var matches = req.headers.cookie.match(new RegExp(
     "(?:^|; )" + authorize.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
   ));
-  return matches ? decodeURIComponent(matches[1]) : undefined;
-});
+  var cookies;
+  cookies = matches ? decodeURIComponent(matches[1]) : undefined;
+
+  if(cookies !== undefined && cookies !== ""){
+    next();
+  }
+
+  if (!req.headers.cookie){
+        res.sendStatus(403);
+        return;
+    }
+  });
 
 app.use(function(error, req, res, next){
     res.setHeader('X-Request-Error', error.toString());
