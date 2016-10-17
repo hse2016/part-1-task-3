@@ -9,6 +9,7 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // some constants
+const CHUNK_LENGTH = 32768;
 const IMAGE_ERROR_403 = 'http://t01.deviantart.net/LGMEna-IVYL1FNjkW8pAc7oJc1s=/fit-in/150x150/filters:no_upscale():origin()/pre09/2ee3/th/pre/f/2011/162/f/b/403_error_tan___uncolored_by_foxhead128-d3io641.png';
 const MESSAGE_ERROR_403 = 'Forbidden';
 
@@ -45,66 +46,69 @@ let findInObject = function(key, arr) {
   return null;
 };
 
-let transliterateToEnglish = function(buffer) {
-  let text = buffer.toString('utf-8');
-  let res = '';
+let doMagicCreator = function(ref) {
+  return function(s) {
+    let prev;
+    let flag;
+    let saved;
+    let res = '';
+    let rrr = false;
+    for (let i = 0; i < s.length; ++i) {
+      prev = ref.current;
+      ref.current += s[i];
 
-  for (let i = 0; i < text.length; ++i) {
-    let char = text[i];
-    let transliteratedChar = findInObject(char, TRANSLITERATION_MAP_TO_ENGLISH);
-    if (transliteratedChar !== null) {
-      res += transliteratedChar;
-    } else {
-      res += char;
+      flag = false;
+      for (var item in ref.map) {
+        if (item.indexOf(ref.current) === 0) {
+          flag = true;
+          break;
+        }
+      }
+
+      if (!flag) {
+        saved = null;
+        for (let item in ref.map) {
+          if (item === prev) {
+            saved = item;
+          }
+        }
+        if (saved !== null) {
+          res += ref.map[saved];
+        } else {
+          res += prev;
+        }
+        prev = '';
+        ref.current = s[i];
+      }
     }
-  }
 
-  return res;
-};
-
-let transliterateToRussian = function(buffer) {
-  let text = buffer.toString('utf-8');
-
-  text = text.replace(/Shh/g, 'Щ');
-  text = text.replace(/Ch/g, 'Ч');
-  text = text.replace(/Sh/g, 'Ш');
-  text = text.replace(/Zh/g, 'Ж');
-  text = text.replace(/Je/g, 'Э');
-  text = text.replace(/Ju/g, 'Ю');
-  text = text.replace(/Ja/g, 'Я');
-  text = text.replace(/Jo/g, 'Ё');
-  text = text.replace(/shh/g, 'щ');
-  text = text.replace(/ch/g, 'ч');
-  text = text.replace(/sh/g, 'ш');
-  text = text.replace(/zh/g, 'ж');
-  text = text.replace(/je/g, 'э');
-  text = text.replace(/ju/g, 'ю');
-  text = text.replace(/ja/g, 'я');
-  text = text.replace(/jo/g, 'ё');
-
-  let res = '';
-
-  for (let i = 0; i < text.length; ++i) {
-    let char = text[i];
-    let transliteratedChar = findInObject(char, TRANSLITERATION_MAP_TO_RUSSIAN);
-    if (transliteratedChar !== null) {
-      res += transliteratedChar;
-    } else {
-      res += char;
+    saved = null;
+    for (let item in ref.map) {
+      if (item.indexOf(ref.current) === 0) {
+        saved = item;
+      }
     }
-  }
-  return res;
+
+    if (saved === null) {
+      res += ref.current;
+      ref.current = '';
+    }
+
+    return res;
+  };
 };
 
 class TransformTransliterateToEnglish extends Transform {
   constructor(options) {
     super(options);
+    this.current = '';
+    this.map = TRANSLITERATION_MAP_TO_ENGLISH;
+    this.doMagic = doMagicCreator(this);
   }
 
   _transform(data, encoding, callback) {
-    let transformed = transliterateToEnglish(data);
-
-    this.push(transformed);
+    let text = data.toString('utf-8');
+    this.push(this.doMagic(text));
 
     callback();
   }
@@ -113,13 +117,14 @@ class TransformTransliterateToEnglish extends Transform {
 class TransformTransliterateToRussian extends Transform {
   constructor(options) {
     super(options);
+    this.current = '';
+    this.map = TRANSLITERATION_MAP_TO_RUSSIAN;
+    this.doMagic = doMagicCreator(this);
   }
 
   _transform(data, encoding, callback) {
-    let transformed = transliterateToRussian(data);
-
-    this.push(transformed);
-
+    let text = data.toString('utf-8');
+    this.push(this.doMagic(text));
     callback();
   }
 }
@@ -290,6 +295,19 @@ let createFileSeekerMiddleware = function() {
             transformed += chunk.toString('utf-8');
           });
           transformerStream.on('end', () => {
+            let nya = null;
+            for (var item in transformerStream.map) {
+              if (item === transformerStream.current) {
+                nya = item;
+              }
+            }
+
+            if (nya !== null) {
+              transformed += transformerStream.map[nya];
+            } else {
+              transformed += transformerStream.current;
+            }
+
             res.header('transfer-encoding', 'chunked');
             res.header('Content-Type', 'application/json'); // for encoding
             let obj = JSON.stringify({'content': transformed});
