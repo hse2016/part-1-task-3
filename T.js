@@ -9,6 +9,11 @@ class T extends Transform {
 
     static get translitsRu() {
         return {
+            'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'jo', 'ж': 'zh', 'з': 'z',
+            'и': 'i', 'й': 'j', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r',
+            'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'c', 'ч': 'ch', 'ш': 'sh', 'щ': 'shh',
+            'ъ': '#', 'ы': 'y', 'ь': '\'', 'э': 'je', 'ю': 'ju', 'я': 'ja',
+
             'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Jo', 'Ж': 'Zh', 'З': 'Z',
             'И': 'I', 'Й': 'J', 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R',
             'С': 'S', 'Т': 'T', 'У': 'U', 'Ф': 'F', 'Х': 'H', 'Ц': 'C', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Shh',
@@ -20,14 +25,23 @@ class T extends Transform {
         return {
             'A' : 'А', 'B' : 'Б', 'C' : 'Ц', 'D' : 'Д', 'E' : 'Е', 'F' : 'Ф', 'G' : 'Г', 'H' : 'Х', 'I' : 'И',
             'J' : 'Й', 'K' : 'К', 'L' : 'Л', 'M' : 'М', 'N' : 'Н', 'O' : 'О', 'P' : 'П', 'Q' : 'Я', 'R' : 'Р',
-            'S' : 'С', 'T' : 'Т', 'U' : 'У', 'V' : 'В', 'W' : 'Щ', 'X' : 'Х', 'Y' : 'Ы', 'Z' : 'З', '\'': 'Ь'
+            'S' : 'С', 'T' : 'Т', 'U' : 'У', 'V' : 'В', 'W' : 'Щ', 'X' : 'Х', 'Y' : 'Ы', 'Z' : 'З', '\'': 'ь',
+            '#' : 'ъ',
+
+            'a' : 'а', 'b' : 'б', 'c' : 'ц', 'd' : 'д', 'e' : 'е', 'f' : 'ф', 'g' : 'г', 'h' : 'х', 'i' : 'и',
+            'j' : 'й', 'k' : 'к', 'l' : 'л', 'm' : 'м', 'n' : 'н', 'o' : 'о', 'p' : 'п', 'q' : 'я', 'r' : 'р',
+            's' : 'с', 't' : 'т', 'u' : 'у', 'v' : 'в', 'w' : 'щ', 'x' : 'х', 'y' : 'ы', 'z' : 'з'
+
         };
     }
 
     static get additionalEn() {
         return {
-            'JO' : 'Ё', 'JU' : 'Ю', 'YO' : 'Ё', 'CH' : 'Ч',
-            'YA' : 'Я', 'JE' : 'Э', 'SHH': 'Щ', 'SH' : 'Ш', 'ZH' : 'Ж'
+            'Jo' : 'Ё', 'Ju' : 'Ю', 'Yo' : 'Ё', 'Ch' : 'Ч',
+            'Ya' : 'Я', 'Je' : 'Э', 'Shh': 'Щ', 'Sh' : 'Ш', 'Zh' : 'Ж', 'Ja' : 'Я',
+
+            'jo' : 'ё', 'ju' : 'ю', 'yo' : 'ё', 'ch' : 'ч',
+            'ya' : 'я', 'je' : 'э', 'shh': 'щ', 'sh' : 'ш', 'zh' : 'ж', 'ja' : 'я'
         }
     }
 
@@ -82,13 +96,13 @@ class T extends Transform {
     _transform(chunk, encoding, callback) {
 
         if (this.type == 'base64') {
-            var str = chunk.toString('base64').toUpperCase();
-            this.push(str);
+            var str = chunk.toString('base64');
+            this.push(JSON.stringify({'content' : str }));
         }
         else {
-            var str = chunk.toString('utf8').toUpperCase();
+            var str = chunk.toString('utf8');
             let new_str = this.translit(str);
-            this.push(new_str);
+            this.push(JSON.stringify({'content' : new_str}));
         }
 
         callback();

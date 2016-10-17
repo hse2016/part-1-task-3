@@ -63,8 +63,8 @@ function readFileOrDir(params, res, type = 'utf8') {
         });
 
     } else if (fs.lstatSync(path).isFile()) {
-        res.setHeader('Content-Type', "text/html");
-        res.setHeader('Transfer-Encoding', "chunked");
+        res.setHeader('Content-Type', "application/json");
+        res.setHeader('transfer-encoding', "chunked");
         var stream = fs.createReadStream(path);
         transformStream(stream, res, type);
         // transformStream(stream, process.stdout, type);

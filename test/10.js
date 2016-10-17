@@ -16,7 +16,7 @@ describe('Check dir files:', () => {
                 if (err) {
                     return done(err);
                 }
-                res.body.toUpperCase().should.eql('ТРАНСЛИТ ТЕКСТ\n');
+                res.body.content.toUpperCase().should.eql('ТРАНСЛИТ ТЕКСТ\n');
                 done();
             });
     });
@@ -32,7 +32,7 @@ describe('Check dir files:', () => {
                 if (err) {
                     return done(err);
                 }
-                res.body.toUpperCase().should.eql('RUSSKIJ TEKST\n');
+                res.body.content.toUpperCase().should.eql('RUSSKIJ TEKST\n');
                 done();
             });
     });
@@ -48,7 +48,7 @@ describe('Check dir files:', () => {
                 if (err) {
                     return done(err);
                 }
-                res.body.toUpperCase().should.eql('RUSSKIJ ENGLISH\n');
+                res.body.content.toUpperCase().should.eql('RUSSKIJ ENGLISH\n');
                 done();
             });
     });
@@ -67,7 +67,7 @@ describe('Check dir files:', () => {
                 if (err) {
                     return done(err);
                 }
-                res.body.toUpperCase().should.eql(contents.toUpperCase());
+                res.body.content.toUpperCase().should.eql(contents.toUpperCase());
                 // (res.body.toLowerCase() == contents.toLowerCase()).should.be.ok();
                 done();
             });
@@ -88,7 +88,7 @@ describe('Check dir files:', () => {
                     return done(err);
                 }
                 // (res.body.toLowerCase() == contents.toLowerCase()).should.be.ok();
-                res.body.toUpperCase().should.eql(contents.toUpperCase());
+                res.body.content.toUpperCase().should.eql(contents.toUpperCase());
                 done();
             });
     });
