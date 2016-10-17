@@ -65,23 +65,22 @@ let transliterateToEnglish = function(buffer) {
 let transliterateToRussian = function(buffer) {
   let text = buffer.toString('utf-8');
 
-  text = text.replace('Ch', 'Ц');
-  text = text.replace('Jo', 'Ё');
-  text = text.replace('Shh', 'Щ');
-  text = text.replace('Sh', 'Ш');
-  text = text.replace('Zh', 'Ж');
-  text = text.replace('Je', 'Э');
-  text = text.replace('Ju', 'Ю');
-  text = text.replace('Ja', 'Я');
-  text = text.replace('Jo', 'Ё');
-  text = text.replace('ch', 'ц');
-  text = text.replace('shh', 'Щ');
-  text = text.replace('sh', 'ш');
-  text = text.replace('zh', 'ж');
-  text = text.replace('je', 'э');
-  text = text.replace('ju', 'ю');
-  text = text.replace('ja', 'я');
-  text = text.replace('jo', 'ё');
+  text = text.replace(/Shh/g, 'Щ');
+  text = text.replace(/Ch/g, 'Ч');
+  text = text.replace(/Sh/g, 'Ш');
+  text = text.replace(/Zh/g, 'Ж');
+  text = text.replace(/Je/g, 'Э');
+  text = text.replace(/Ju/g, 'Ю');
+  text = text.replace(/Ja/g, 'Я');
+  text = text.replace(/Jo/g, 'Ё');
+  text = text.replace(/shh/g, 'щ');
+  text = text.replace(/ch/g, 'ч');
+  text = text.replace(/sh/g, 'ш');
+  text = text.replace(/zh/g, 'ж');
+  text = text.replace(/je/g, 'э');
+  text = text.replace(/ju/g, 'ю');
+  text = text.replace(/ja/g, 'я');
+  text = text.replace(/jo/g, 'ё');
 
   let res = '';
 
@@ -94,7 +93,6 @@ let transliterateToRussian = function(buffer) {
       res += char;
     }
   }
-  console.log(res);
   return res;
 };
 
@@ -280,10 +278,8 @@ let createFileSeekerMiddleware = function() {
             res.end();
             return;
           } else if(toRussian) {
-            console.log('ru');
             transformerStream = new TransformTransliterateToEnglish();
           } else {
-            console.log('en');
             transformerStream = new TransformTransliterateToRussian();
           }
 
@@ -295,7 +291,7 @@ let createFileSeekerMiddleware = function() {
           });
           transformerStream.on('end', () => {
             res.header('transfer-encoding', 'chunked');
-            res.header('Content-Type', 'text/plain;charset=utf-8'); // for encoding
+            res.header('Content-Type', 'application/json'); // for encoding
             let obj = JSON.stringify({'content': transformed});
             res.end(obj);
           });
