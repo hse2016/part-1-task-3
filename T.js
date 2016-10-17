@@ -23,28 +23,28 @@ class T extends Transform {
 
     static get translitsEN() {
         return {
-            'A' : 'А', 'B' : 'Б', 'C' : 'Ц', 'D' : 'Д', 'E' : 'Е', 'F' : 'Ф', 'G' : 'Г', 'H' : 'Х', 'I' : 'И',
-            'J' : 'Й', 'K' : 'К', 'L' : 'Л', 'M' : 'М', 'N' : 'Н', 'O' : 'О', 'P' : 'П', 'Q' : 'Я', 'R' : 'Р',
-            'S' : 'С', 'T' : 'Т', 'U' : 'У', 'V' : 'В', 'W' : 'Щ', 'X' : 'Х', 'Y' : 'Ы', 'Z' : 'З', '\'': 'ь',
-            '#' : 'ъ',
+            'A': 'А', 'B': 'Б', 'C': 'Ц', 'D': 'Д', 'E': 'Е', 'F': 'Ф', 'G': 'Г', 'H': 'Х', 'I': 'И',
+            'J': 'Й', 'K': 'К', 'L': 'Л', 'M': 'М', 'N': 'Н', 'O': 'О', 'P': 'П', 'Q': 'Я', 'R': 'Р',
+            'S': 'С', 'T': 'Т', 'U': 'У', 'V': 'В', 'W': 'Щ', 'X': 'Х', 'Y': 'Ы', 'Z': 'З', '\'': 'ь',
+            '#': 'ъ',
 
-            'a' : 'а', 'b' : 'б', 'c' : 'ц', 'd' : 'д', 'e' : 'е', 'f' : 'ф', 'g' : 'г', 'h' : 'х', 'i' : 'и',
-            'j' : 'й', 'k' : 'к', 'l' : 'л', 'm' : 'м', 'n' : 'н', 'o' : 'о', 'p' : 'п', 'q' : 'я', 'r' : 'р',
-            's' : 'с', 't' : 'т', 'u' : 'у', 'v' : 'в', 'w' : 'щ', 'x' : 'х', 'y' : 'ы', 'z' : 'з'
+            'a': 'а', 'b': 'б', 'c': 'ц', 'd': 'д', 'e': 'е', 'f': 'ф', 'g': 'г', 'h': 'х', 'i': 'и',
+            'j': 'й', 'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н', 'o': 'о', 'p': 'п', 'q': 'я', 'r': 'р',
+            's': 'с', 't': 'т', 'u': 'у', 'v': 'в', 'w': 'щ', 'x': 'х', 'y': 'ы', 'z': 'з'
 
         };
     }
 
     static get additionalEn() {
         return {
-            'Jo' : 'Ё', 'Ju' : 'Ю', 'Yo' : 'Ё', 'Ch' : 'Ч',
-            'Ya' : 'Я', 'Je' : 'Э', 'Shh': 'Щ', 'Sh' : 'Ш', 'Zh' : 'Ж', 'Ja' : 'Я',
+            'Jo': 'Ё', 'Ju': 'Ю', 'Yo': 'Ё', 'Ch': 'Ч',
+            'Ya': 'Я', 'Je': 'Э', 'Shh': 'Щ', 'Sh': 'Ш', 'Zh': 'Ж', 'Ja': 'Я',
 
-            'JO' : 'Ё', 'JU' : 'Ю', 'YO' : 'Ё', 'CH' : 'Ч',
-            'YA' : 'Я', 'JE' : 'Э', 'SHH': 'Щ', 'SH' : 'Ш', 'ZH' : 'Ж', 'JA' : 'Я',
+            'JO': 'Ё', 'JU': 'Ю', 'YO': 'Ё', 'CH': 'Ч',
+            'YA': 'Я', 'JE': 'Э', 'SHH': 'Щ', 'SH': 'Ш', 'ZH': 'Ж', 'JA': 'Я',
 
-            'jo' : 'ё', 'ju' : 'ю', 'yo' : 'ё', 'ch' : 'ч',
-            'ya' : 'я', 'je' : 'э', 'shh': 'щ', 'sh' : 'ш', 'zh' : 'ж', 'ja' : 'я'
+            'jo': 'ё', 'ju': 'ю', 'yo': 'ё', 'ch': 'ч',
+            'ya': 'я', 'je': 'э', 'shh': 'щ', 'sh': 'ш', 'zh': 'ж', 'ja': 'я'
         }
     }
 
@@ -55,6 +55,7 @@ class T extends Transform {
         this.type = 'utf8';
         this.defined = false;
         this.translits = undefined;
+        this.lastChar = undefined
     }
 
     setType(type) {
@@ -63,7 +64,7 @@ class T extends Transform {
 
     translit(str) {
 
-        if(!this.defined) {
+        if (!this.defined) {
             let not_rus = isNoRussian(str);
             let not_en = isNoEnglish(str);
 
@@ -75,17 +76,40 @@ class T extends Transform {
                 this.translits = T.translitsEN;
                 this.defined = true;
 
-                for(let i in T.additionalEn) {
-                    // str = str.split(i).join(T.additionalEn[i]);
-                    console.log(str.length)
-                    str = str.replace(new RegExp(i, 'g'), T.additionalEn[i]);
-                }
-            } else if(not_rus && not_en) {
+                // for(let i in T.additionalEn) {
+                //     // str = str.split(i).join(T.additionalEn[i]);
+                //     str = str.replace(new RegExp(i, 'g'), T.additionalEn[i]);
+                // }
+            } else if (not_rus && not_en) {
                 new_str = str;
             }
         }
 
         if (this.translits) {
+
+            if(!this.translit['B']) {
+                // if (this.lastChar)
+                //     str = this.lastChar + str;
+                //
+                // // console.log(str)
+                //
+                // let last_char = str[str.length - 2] + str[str.length - 1];
+                // if (!T.additionalEn[last_char]) {
+                //     this.lastChar = str[str.length - 1];
+                //     str = str.slice(0, -1);
+                // } else {
+                //     this.lastChar = undefined;
+                // }
+
+            }
+
+            for (let i in T.additionalEn) {
+                // str = str.split(i).join(T.additionalEn[i]);
+                str = str.replace(new RegExp(i, 'g'), T.additionalEn[i]);
+            }
+
+            // console.log(str + '\n\n\n\n')
+
             var new_str = '';
             for (var i in str) {
                 var char = this.translits[str[i]];
@@ -99,6 +123,7 @@ class T extends Transform {
 
         return new_str;
     }
+
 
     _transform(chunk, encoding, callback) {
 
@@ -116,21 +141,33 @@ class T extends Transform {
     }
 }
 
-function isNoRussian(str) {
+function
+
+isNoRussian(str) {
     return (/[А-Я-Ё]/gi.test(str) ? false : true);
 }
-function isNoEnglish(str) {
+
+function
+
+isNoEnglish(str) {
     return (/[A-Z]/gi.test(str) ? false : true);
 }
-function englishIndex(str) {
+
+function
+
+englishIndex(str) {
     var res = /[A-Z]/gi.exec(str);
     return res.index;
 }
-function russianIndex(str) {
+
+function
+
+russianIndex(str) {
     var res = /[А-Я-Ё]/gi.exec(str);
     return res.index;
 }
 
 
-module.exports = T; // TODO: kek
+module
+    .exports = T; // TODO: kek
 
