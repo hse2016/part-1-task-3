@@ -93,8 +93,17 @@ const files = (req, res) => {
         // console.log('pam');
         path = req.params['arr'] + req.params[0];
     }
+
+    if (path === '../') {
+        res.status(503).setHeader('x-request-error', path).end();
+        console.log('res with request error');
+        return;
+    }
+    path = path.replace(new RegExp('.+/\.\./', 'gi'), '');
+
     path = './' + path;
 
+    console.log(path);
     if (fs.lstatSync(path).isDirectory()) {
         fs.readdir(path, (err, items) => {
             console.log(items);
@@ -102,12 +111,22 @@ const files = (req, res) => {
             res.status(200).send({'content': json_items});
         });
     } else if (fs.lstatSync(path).isFile()) {
-        console.log('create stream');
+        // console.log('create stream');
         var stream = fs.createReadStream(path);
-        var trns  = new MyTransform();
-        stream.pipe(trns).pipe(process.stdout);
-        trns  = new MyTransform();
-        stream.pipe(trns).pipe(res);
+        var trns = new MyTransform();
+        stream.pipe(trns);
+
+        let str = '';
+        trns.on('data', (chunk) => {
+            str += chunk.toString('utf-8');
+        });
+        trns.on('end', () => {
+            res.setHeader('Transfer-Encoding', 'chunked');
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({content: str}));
+            // console.log(str);
+        });
+
 
     } else {
         res.sendStatus(503).end();
@@ -117,36 +136,36 @@ const files = (req, res) => {
 
 module.exports = app;
 
-const rusToEng_upper = {
+const rusToEng = {
     'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Jo', 'Ж': 'Zh', 'З': 'Z',
     'И': 'I', 'Й': 'J', 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R',
     'С': 'S', 'Т': 'T', 'У': 'U', 'Ф': 'F', 'Х': 'H', 'Ц': 'C', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Shh',
-    'Ъ': '#', 'Ы': 'Y', 'Ь': '\'', 'Э': 'Je', 'Ю': 'Ju', 'Я': 'Ja'
-};
-
-const rusToEng_lower = {
+    'Ъ': '#', 'Ы': 'Y', 'Ь': '\'', 'Э': 'Je', 'Ю': 'Ju', 'Я': 'Ja',
     'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'jo', 'ж': 'zh', 'з': 'z',
     'и': 'i', 'й': 'j', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r',
     'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'c', 'ч': 'ch', 'ш': 'sh', 'щ': 'shh',
     'ъ': '#', 'ы': 'y', 'ь': '\'', 'э': 'je', 'ю': 'ju', 'я': 'ja'
 };
 
-const engToRus_upper = {
-    'A': 'А', 'B': 'Б', 'C': 'Ц', 'D': 'Д', 'E': 'Е', 'F': 'Ф', 'G': 'Г', 'H': 'Х', 'I': 'И',
-    'J': 'Й', 'K': 'К', 'L': 'Л', 'M': 'М', 'N': 'Н', 'O': 'О', 'P': 'П', 'Q': 'Я', 'R': 'Р',
-    'S': 'С', 'T': 'Т', 'U': 'У', 'V': 'В', 'W': 'Щ', 'X': 'Х', 'Y': 'Ы', 'Z': 'З', '\'': 'Ь',
+const engToRus_additional = {
     'JO': 'Ё', 'JU': 'Ю', 'YO': 'Ё', 'CH': 'Ч',
-    'YA': 'Я', 'JE': 'Э', 'SHH': 'Щ', 'SH': 'Ш', 'ZH': 'Ж'
-};
-
-const engToRus_lower = {
-    'a': 'a', 'b': 'б', 'c': 'ц', 'd': 'д', 'e': 'е', 'f': 'ф', 'g': 'г', 'h': 'х', 'i': 'и',
-    'j': 'й', 'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н', 'o': 'о', 'p': 'п', 'q': 'я', 'r': 'р',
-    's': 'с', 't': 'т', 'u': 'у', 'v': 'в', 'w': 'щ', 'x': 'х', 'y': 'ы', 'z': 'з', '\'': 'ь',
+    'YA': 'Я', 'JE': 'Э', 'SHH': 'Щ', 'SH': 'Ш', 'ZH': 'Ж',
+    '#': 'ъ',
     'jo': 'ё', 'ju': 'ю', 'yo': 'ё', 'ch': 'ч',
     'ya': 'я', 'je': 'э', 'shh': 'щ', 'sh': 'ш', 'zh': 'ж',
     'Jo': 'Ё', 'Ju': 'Ю', 'Yo': 'Ё', 'Ch': 'Ч',
     'Ya': 'Я', 'Je': 'Э', 'Shh': 'Щ', 'Sh': 'Ш', 'Zh': 'Ж'
+};
+
+const engToRus = {
+    'A': 'А', 'B': 'Б', 'C': 'Ц', 'D': 'Д', 'E': 'Е', 'F': 'Ф', 'G': 'Г', 'H': 'Х', 'I': 'И',
+    'J': 'Й', 'K': 'К', 'L': 'Л', 'M': 'М', 'N': 'Н', 'O': 'О', 'P': 'П', 'Q': 'Я', 'R': 'Р',
+    'S': 'С', 'T': 'Т', 'U': 'У', 'V': 'В', 'W': 'Щ', 'X': 'Х', 'Y': 'Ы', 'Z': 'З',
+
+    'a': 'а', 'b': 'б', 'c': 'ц', 'd': 'д', 'e': 'е', 'f': 'ф', 'g': 'г', 'h': 'х', 'i': 'и',
+    'j': 'й', 'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н', 'o': 'о', 'p': 'п', 'q': 'я', 'r': 'р',
+    's': 'с', 't': 'т', 'u': 'у', 'v': 'в', 'w': 'щ', 'x': 'х', 'y': 'ы', 'z': 'з', '\'': 'ь'
+
 };
 
 class MyTransform extends Transform {
@@ -162,25 +181,27 @@ class MyTransform extends Transform {
         if (this.detected === false){
             this.detectLanguage(str);
         }
-        console.log(str);
+        // console.log(str);
         if (this.detected === true){
             if (this.isToRus) {
-                str = this.translate(str, engToRus_lower, engToRus_upper);
+                str = this.translate(str, engToRus, engToRus_additional);
             }
             else {
-                str = this.translate(str, rusToEng_lower, rusToEng_upper);
+                str = this.translate(str, rusToEng);
             }
         }
         this.push(str);
         callback();
     }
 
-    translate(str, lower_map, upper_map){
-        for (let val in lower_map) {
-            str = str.replace(new RegExp(val,'g'), lower_map[val]);
+    translate(str, map, map_additional){
+        if (map_additional) {
+            for (let val in map_additional) {
+                str = str.replace(new RegExp(val,'g'), map_additional[val]);
+            }
         }
-        for (let val in upper_map) {
-            str = str.replace(new RegExp(val,'g'), upper_map[val]);
+        for (let val in map) {
+            str = str.replace(new RegExp(val,'g'), map[val]);
         }
         return str;
     }
@@ -203,7 +224,7 @@ class MyTransform extends Transform {
 
 // const rq = require('supertest');
 // rq(app)
-//     .get('/v1/files/file.multi.txt')
+//     .get('/v1/tmpGLAHsR/../file3742261894251766')
 //     .set('Cookie', ['authorize=12345667'])
 //     .expect(200)
-//     .end((err,res) => {});
+//     .end((err,res) => {console.log('finish')});
