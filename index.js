@@ -7,14 +7,24 @@ const authorize = 'authorize';
 
 const PORT = process.env.PORT || 4000;
 
-var engCh = ['A','B','V','G','D','E','Jo','Zh','Z','I','J','K','L','M','N','O','P','R','S','T','U','F','H','C','Ch','Sh','Shh','##','Y','"','Je','Ju','Ja',
+const engCh = ['A','B','V','G','D','E','Jo','Zh','Z','I','J','K','L','M','N','O','P','R','S','T','U','F','H','C','Ch','Sh','Shh','##','Y','"','Je','Ju','Ja',
              'a','b','v','g','d','e','jo','zh','z','i','j','k','l','m','n','o','p','r','s','t','u','f','h','c','ch','sh','shh','#','y',''','je','ju','ja'];
-var rusCh = ['А','Б','В','Г','Д','Е','Ё','Ж','З','И','Й','К','Л','М','Н','О','П','Р','С','Т','У','Ф','Х','Ц','Ч','Ш','Щ','Ъ','Ы','Ь','Э','Ю','Я',
+const rusCh = ['А','Б','В','Г','Д','Е','Ё','Ж','З','И','Й','К','Л','М','Н','О','П','Р','С','Т','У','Ф','Х','Ц','Ч','Ш','Щ','Ъ','Ы','Ь','Э','Ю','Я',
              'а','б','в','г','д','е','ё','ж','з','и','й','к','л','м','н','о','п','р','с','т','у','ф','х','ц','ч','ш','щ','ъ','ы','ь','э','ю','я'];
 
 
+app.use((req, res, next) => {
+   req.startAt = process.hrtime();
+   next();
+  });
 
-function authorize(){}
+app.use((req, res, next) => {//urls
+    let method_url = req.method + ' ' + req.originalUrl;
+    res.setHeader('X-Request-Url', method_url);
+    console.log('X-Request-Url: ', method_url);
+    next();
+});
+
 app.listen(PORT, function () {
     console.log(`App is listen on ${PORT}`);
 });
