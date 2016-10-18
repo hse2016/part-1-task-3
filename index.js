@@ -24,19 +24,12 @@ app.listen(PORT, function () {
 function transformStream(streamIn, streamOut, type = 'utf8') {
     let s = '';
 
+    streamOut.setHeader('Transfer-Encoding', 'chunked');
+    streamOut.setHeader('Content-Type', 'application/json');
+
     var t = new T();
     t.setType(type);
-    streamIn.pipe(t);
-
-    t.on('data', (chunk) => {
-        s += chunk.toString('utf-8');
-    });
-
-    t.on('end', () => {
-        streamOut.setHeader('Transfer-Encoding', 'chunked');
-        streamOut.setHeader('Content-Type', 'application/json');
-        streamOut.end(JSON.stringify( { content : s } ));
-    });
+    streamIn.pipe(t).pipe(streamOut);
 
 }
 
