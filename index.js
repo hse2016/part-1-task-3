@@ -92,7 +92,7 @@ class Translitartor extends Transform {
                         }
                     }
                 }
-            } else if (str[i] in this.dictionary) {
+            } else if (this.dictionary && str[i] in this.dictionary) {
                 formatted += this.dictionary[str[i]];
             } else {
                 formatted += str[i];
