@@ -196,6 +196,7 @@ app.get('/v1/*', function (req, res) {
         tstream
             .pipe(res)
             .on('data', function(data) {
+                res.set('Content-type', 'application/json');
                 res.status(200).send({content : data});
             });
     }
