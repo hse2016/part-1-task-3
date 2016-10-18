@@ -74,21 +74,20 @@ app.use((req, res, next) => {
       }
       transformation();
     }
-    function transformation(cookies, toRus, toEng){
+    function transformation(cookies, toRus, toEng, callback){
       if(toRus && !toEng){
         var replacer = function(a) {return engCh[a]||a};
         str = cookies.replace(/[A-z]/g, replacer);
-        return str;
       }
       else if (!toRus && toEng) {
         var replacer = function(a) {return engCh[a]||a};
         str = cookies.replace(/[А-я]/g, replacer);
-        return str;
       }
       else {
         str = null;
       }
-      console.log(cookies, str);
+      this.push(str);
+      callback();
     }
   }
 
