@@ -50,8 +50,9 @@ app.use((req, res, next) => {
   class TextTransform extends TransformStream{
     let toRus;
     let toEng;
+
     constructor() {
-      if (/[а-я].i.test(cookies)) {
+      if (/[а-я]/.i.test(cookies)) {
         toRus = false;
         toEng = true;
       }
@@ -60,6 +61,7 @@ app.use((req, res, next) => {
         toEng = false;
       }
     }
+    function transformation(){}
   }
 
   app.use((req, res, next) => {
