@@ -57,6 +57,7 @@ class T extends Transform {
         this.translits = undefined;
         this.lastChars = '';
         this.alreadyFlush = false;
+        this.first = true;
     }
 
     setType(type) {
@@ -83,6 +84,7 @@ class T extends Transform {
     }
 
     translit(str) {
+
 
         if (!this.defined) {
             let not_rus = isNoRussian(str);
@@ -121,16 +123,14 @@ class T extends Transform {
                 str = str.replace(new RegExp(i, 'g'), this.translits[i]);
             }
 
-            // var new_str = '';
-            // for (var i in str) {
-            //     var char = this.translits[str[i]];
-            //     if (char) {
-            //         new_str += char;
-            //     } else {
-            //         new_str += str[i];
-            //     }
-            // }
         }
+
+        if(this.first) {
+            str = '{ "content" : "' + str;
+            this.first = false;
+        }
+
+        str = str.replace(new RegExp('\n', 'g'), '\\n');
 
         return str;
     }
@@ -147,7 +147,7 @@ class T extends Transform {
         else {
             str = str.toString('utf8');
             let new_str = this.translit(str);
-            this.push(new_str);
+            this.push(new_str + '"}');
         }
 
         callback();
