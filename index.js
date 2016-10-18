@@ -77,11 +77,11 @@ class Translitartor extends Transform {
                 }
             }
             if (this.dictionaryName === 'en') {
-                if (enShh.indexOf(str[i] + str[i + 1] + str[i + 2]) !== -1) {
+                if ((i < str.length - 2) && (enShh.indexOf(str[i] + str[i + 1] + str[i + 2]) !== -1)) {
                     formatted += (str[i] === 's') ? 'щ' : 'Щ';
                     i += 2;
                 } else {
-                    if ((str[i] + str[i + 1]) in enSpecial) {
+                    if ((i < str.length - 1) && ((str[i] + str[i + 1]) in enSpecial)) {
                         formatted += this.dictionary[str[i] + str[i + 1]];
                         i += 1;
                     } else {
@@ -152,7 +152,7 @@ app.use(function (req, res, next) {
     next();
 });
 
-app.get('/', function (req, res, next) {
+app.get('/', function (req, res) {
     throw {
         status: 503,
         message: 'Unknown request'
@@ -194,9 +194,8 @@ app.get('/v1/*', function (req, res) {
         rstream
             .pipe(tstream);
         tstream
+            .pipe(res)
             .on('data', function(data) {
-                console.log(data);
-                res.set('transfer-encoding', 'chunked');
                 res.status(200).send({content : data});
             });
     }
@@ -206,7 +205,6 @@ app.get('/v1/*', function (req, res) {
 
 app.use(function (err, req, res, next) {
     if (err) {
-        console.error(err);
         res.set('X-Request-Error', err.message);
         res.status(err.status).send(err.message);
     }
