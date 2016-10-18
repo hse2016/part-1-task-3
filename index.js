@@ -4,6 +4,7 @@ const express = require('express');
 const app = express();
 const fs = require('fs');
 const authorize = 'authorize';
+const TransformStream = require('stream').Transform;
 
 const PORT = process.env.PORT || 4000;
 
@@ -28,12 +29,12 @@ app.use((req, res, next) => {//urls
 app.listen(PORT, function () {
     console.log(`App is listen on ${PORT}`);
 });
-
+var cookies;
 app.use((req, res, next) => {
   var matches = req.headers.cookie.match(new RegExp(
     "(?:^|; )" + authorize.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
   ));
-  var cookies;
+
   cookies = matches ? decodeURIComponent(matches[1]) : undefined;
 
   if(cookies !== undefined && cookies !== ""){
@@ -45,6 +46,21 @@ app.use((req, res, next) => {
         return;
     }
   });
+
+  class TextTransform extends TransformStream{
+    let toRus;
+    let toEng;
+    constructor() {
+      if (/[а-я].i.test(cookies)) {
+        toRus = false;
+        toEng = true;
+      }
+      else {
+        toRus = true;
+        toEng = false;
+      }
+    }
+  }
 
   app.use((req, res, next) => {
     var time = process.hrtime(req.startAt);
