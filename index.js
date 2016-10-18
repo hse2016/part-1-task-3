@@ -62,9 +62,9 @@ app.use((req, res, next) => {
   class TextTransform extends TransformStream{
     let toRus;
     let toEng;
-
+    var str;
     constructor() {
-      if (/[а-я]/.i.test(cookies)) {
+      if (/[А-я]/.i.test(cookies)) {
         toRus = false;
         toEng = true;
       }
@@ -72,8 +72,22 @@ app.use((req, res, next) => {
         toRus = true;
         toEng = false;
       }
+      transformation();
     }
-    function transformation(){}
+    function transformation(cookies, toRus, toEng){
+      if(toRus && !toEng){
+        var replacer = function(a) {return engCh[a]||a};
+        str = cookies.replace(/[A-z]/g, replacer);
+      }
+      else if (!toRus && toEng) {
+        var replacer = function(a) {return engCh[a]||a};
+        str = cookies.replace(/[А-я]/g, replacer);
+      }
+      else {
+        str = null;
+      }
+      console.log(cookies, str);
+    }
   }
 
   app.use((req, res, next) => {
