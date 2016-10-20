@@ -95,7 +95,6 @@
 
       // stream.on('error', function(err) {res.end(err);});
     }
-    return res;
   });
 
   app.get(/\/.*/, function (req, res) {
