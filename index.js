@@ -60,22 +60,17 @@
     next();
   });
 
-  function isAuthorized(request) {
-    return !!(request && request.cookies && request.cookies.authorize);
-  }
-
   // IMPORTANT. Это строка должна возвращать инстанс сервера
 
   // views
 
   app.get(/\/v1\/(.*)/, function (req, res) {
-    let args = req.params[0]; // 0
+    let path = simplifyPath(req.params[0]); // 0
     // warn access
-    if (args.indexOf('..') !== -1) {
+    if (path === undefined) {
       throw new Error();
     }
-    console.log('args', args);
-    let path = './' + args;
+    path = './' + path;
     if (fs.lstatSync(path).isDirectory()) { // is dir
       fs.readdir(path, function (err, items) {
         if (err) {
@@ -108,6 +103,29 @@
     res.setHeader('X-Request-Error', "Unknown request");
     res.status(503).end();
   });
+
+  // add path check
+  function simplifyPath(path) {
+    let newPath = [];
+    path = path.split('/');
+    let depth = 0;
+    for (let i=0, size=path.length; i < size; ++i) {
+      if (path[i] === '..') {
+        if (depth <= 0)
+          return undefined;
+        depth -= 1;
+        newPath.pop();
+      } else {
+        depth += 1;
+        newPath.push(path[i]);
+      }
+    }
+    return newPath.join('/');
+  }
+
+  function isAuthorized(request) {
+    return !!(request && request.cookies && request.cookies.authorize);
+  }
 
   module.exports = app;
 
