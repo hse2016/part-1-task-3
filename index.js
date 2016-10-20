@@ -71,6 +71,7 @@
       throw new Error();
     }
     path = './' + path;
+
     if (fs.lstatSync(path).isDirectory()) { // is dir
       fs.readdir(path, function (err, items) {
         if (err) {
@@ -84,13 +85,17 @@
         res.send(context);
       });
     } else {
+
       let stream = fs.createReadStream(path),
           tstream = new TransformStream();
 
+      res.setHeader('Content-Type', 'application/json');
+      console.log(typeof res);
       stream.pipe(tstream).pipe(res);
 
-      stream.on('error', function(err) {res.end(err);});
+      // stream.on('error', function(err) {res.end(err);});
     }
+    return res;
   });
 
   app.get(/\/.*/, function (req, res) {
