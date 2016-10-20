@@ -90,7 +90,6 @@
           tstream = new TransformStream();
 
       res.setHeader('Content-Type', 'application/json');
-      console.log(typeof res);
       stream.pipe(tstream).pipe(res);
 
       // stream.on('error', function(err) {res.end(err);});
