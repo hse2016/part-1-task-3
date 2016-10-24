@@ -36,7 +36,7 @@ app.get(/./, (req, res, next) => {
     if (raw_cookie && raw_cookie.startsWith('authorize=')) // TODO: извлечь куки нормально, их может быть несколько
         aut_cookie = raw_cookie.substr(10);
 
-    if (raw_cookie) { // aut_cookie
+    if (aut_cookie) { // raw_cookie, чтобы потестить через браузер
         let path = '.' + req.originalUrl;
         path = path.replace('/v1','');
         fs.stat(path, (err, stats) => {
