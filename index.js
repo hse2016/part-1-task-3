@@ -190,15 +190,9 @@ app.get('/v1/*', function (req, res) {
     } else {
         let rstream = fs.createReadStream(url);
         let tstream = new Translitartor();
-        tstream.setEncoding('utf8');
         rstream
-            .pipe(tstream);
-        tstream
-            .pipe(res)
-            .on('data', function(data) {
-                res.set('Content-type', 'application/json');
-                res.status(200).send({content : data});
-            });
+            .pipe(tstream)
+            .pipe(res);
     }
 });
 
