@@ -61,11 +61,16 @@ class Translitartor extends Transform {
             this.dictionary = rus;
             this.dictionaryName = 'rus';
         }
+        this._alreadyBeg = false;
+        this._alreadyEnd = false;
     }
 
     _transform(chunk, encoding, callback) {
         let str = chunk.toString('utf8');
         let formatted = '';
+        if (!this._alreadyBeg) {
+            this.push('{"content": "');
+        }
         for (let i = 0; i < str.length; i++) {
             if (!this.dictionary) {
                 if (str[i] in rus) {
@@ -98,7 +103,15 @@ class Translitartor extends Transform {
                 formatted += str[i];
             }
         }
-        this.push(formatted);
+        this.push(formatted.replace(/"/g, '\"'));
+        callback();
+    }
+
+    _flush(callback) {
+        if (! this._alreadyEnd) {
+            this.push('"}');
+        }
+
         callback();
     }
 }
