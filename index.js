@@ -5,13 +5,13 @@
 const express = require('express');
 const app = express();
 const fs = require('fs');
+const node_path = require('path'); // for resolving path
 const PORT = process.env.PORT || 4000;
-const TranslitTransform = require('./translit-transform');
+const TranslitTransform = require('./TranslitTransform');
 var hrTimeStart;
 
 var startLogger = (req, res, next) => {
     hrTimeStart = process.hrtime();
-    console.log('Logging started, hrtime:', hrTimeStart);
     next();
 };
 app.use(startLogger);
@@ -30,7 +30,6 @@ var requestsLogger = (req, res, next) => {
 app.use(requestsLogger);
 
 app.get(/./, (req, res, next) => {
-    console.log('incoming cookie', req.headers.cookie);
     let raw_cookie = req.headers.cookie;
     let aut_cookie;
     if (raw_cookie && raw_cookie.startsWith('authorize=')) // TODO: извлечь куки нормально, их может быть несколько
@@ -39,28 +38,26 @@ app.get(/./, (req, res, next) => {
     if (aut_cookie) { // raw_cookie, чтобы потестить через браузер
         let path = '.' + req.originalUrl;
         path = path.replace('/v1','');
+        path = node_path.resolve(path);
         fs.stat(path, (err, stats) => {
             if (err) {
                 console.error(err);
                 return next(new Error('Unknown request'));
             }
-            res.append('Content-Type', 'application/json; charset=utf-8').status(200);
+            res.append('Content-Type', 'application/json').status(200);
             if (stats.isFile()) {
                 let stream = fs.createReadStream(path);
                 let tt = new TranslitTransform();
                 finishLogging(res);
-                // res.type('json').status(200);
-                // res.charset = 'utf-8';
                 res.write('{"content":"');
-                stream.pipe(tt).pipe(res);
-                // stream.pipe(tt).pipe(process.stdout);
+                stream.pipe(tt).pipe(res); // stream.pipe(tt).pipe(process.stdout);
                 stream.on('error', (err) => {
                     return next(err); 
                 });
                 stream.on('close', () => {
                     res.end();
                 });
-                res.on('close', () => {
+                res.on('close', () => { // закрыть файл, если соединение разорвано
                     stream.destroy();
                 });
             }
@@ -70,7 +67,6 @@ app.get(/./, (req, res, next) => {
                         return next(err);
                     else {
                         files.unshift('.', '..');
-                        // sendResponse(res, files);
                         finishLogging(res);
                         res.send({ content: files });
                     }
@@ -79,22 +75,17 @@ app.get(/./, (req, res, next) => {
         });
     }
     else {
-        finishLogging(res); // TODO: remove
+        finishLogging(res);
         res.sendStatus(403);
     }
 });
 
 function finishLogging(res) {
     let diff = process.hrtime(hrTimeStart);
-    let diffMicros = ((diff[0] * 1000000000 + diff[1]) / 1000000).toFixed(3);
-    res.append('X-Time', diffMicros);
-    console.log('Logging ended, ms elapsed:', diffMicros);
+    let diffMillis = ((diff[0] * 1000000000 + diff[1]) / 1000000).toFixed(3); // diff[0] в секундах, diff[1] в наносекундах
+    res.append('X-Time', diffMillis);
+    console.log('Logging ended, ms elapsed:', diffMillis);
 }
-
-// function sendResponse(res, content_str) {
-//     finishLogging(res);
-//     res.status(200).send({ content: content_str });
-// }
 
 var errorHandler = (err, req, res, next) => {
     let msg = err.message;

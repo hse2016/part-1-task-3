@@ -1,6 +1,5 @@
-/**
- * Created by WERT on 24-Oct-16.
- */
+// Sergey Volkov aka WERT7
+
 'use strict';
 
 var Transform = require('stream').Transform;
@@ -60,6 +59,29 @@ function translitToRu(str) {
     return str;
 }
 
+// ========== ↓ To pass 'achchchch' test ↓ ==========
+var lang;
+var lastSymbolsFromLastChunk;
+
+function removeLastSymbolsIfNeeded(str) {
+    if (str.endsWith('Sh') || str.endsWith('sh')) {
+        lastSymbolsFromLastChunk = str.slice(-2);
+        return str.slice(0, str.length - 2);
+    }
+    else if (str.endsWith('J') || str.endsWith('j')
+            || str.endsWith('Z') || str.endsWith('z')
+            || str.endsWith('C') || str.endsWith('c')
+            || str.endsWith('S') || str.endsWith('s')) {
+        lastSymbolsFromLastChunk = str[str.length - 1];
+        return str.slice(0, str.length - 1);
+    }
+    else {
+        lastSymbolsFromLastChunk = '';
+        return str;
+    }
+}
+// ========== ↑ To pass 'achchchch' test ↑ ==========
+
 class TranslitTransform extends Transform
 {
     constructor(options) {
@@ -67,19 +89,27 @@ class TranslitTransform extends Transform
     }
 
     _transform(chunk, encoding, callback) {
-        var str = chunk.toString('utf8');
-        var newStr;
-        if (getLanguage(str) === 'ru')
-            newStr = translitToEng(str);
-        else if (getLanguage(str) === 'en')
-            newStr = translitToRu(str);
+        let str = chunk.toString('utf8');
+        if (!lang)
+            lang = getLanguage(str);
+        if (lang === 'en') {
+            if (lastSymbolsFromLastChunk)
+                str = lastSymbolsFromLastChunk + str;
+            str = removeLastSymbolsIfNeeded(str);
+        }
+        let newStr = lang === 'ru' ? translitToEng(str) : translitToRu(str);
         this.push(newStr);
 
         callback();
     }
 
     _flush() {
+        if (lastSymbolsFromLastChunk) {
+            let newStr = translitToRu(lastSymbolsFromLastChunk);
+            this.push(newStr);
+        }
         this.push('"}');
+        lang = '';
     }
 }
 
