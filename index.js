@@ -18,17 +18,9 @@ app.use(function (req, res, next) {
 
 
 app.use(function (req, res, next) {
-    // req.on('/incorrect', function(err) {
-    //     // This prints the error message and stack trace to `stderr`.
-    //     res.writeHead(503, {'X-Request-Error' :  err.toString()});
-    //     console.error('X-Request-Error', err.toString());
-    //     res.end();
-    //
-    // });dfdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddeed
     var method = req.method; //'GET'
     var url = req.url; // /v(number)/..
     res.setHeader('X-Request-Url', method + ' ' + url);
-    console.log('X-Request-Url: ', method + ' ' + url);
     next();
 });
 
@@ -36,15 +28,17 @@ app.use(function (req, res, next) {
 
     var current_cookie = req.headers.cookie;
 
-    if (!current_cookie) {
-
+    if (!current_cookie){
         res.sendStatus(403);
-        //return;
+        return;
     }
-
     if (prepare_cookies(current_cookie)) {
         next();
     }
+    else
+        res.sendStatus(403);
+
+
 
 });
 
@@ -54,27 +48,37 @@ function prepare_cookies(cookie) {
 
     cookie = cookie.split('\n');
     for (var i = 0; i < cookie.length; ++i) {
-        var temp = cookie[i].split('=');
+        var temp = cookie[i].trim().split('=');
+        if (temp.length < 2)
+            return;
         result[temp[0]] = temp;
     }
-
-    return !!(result && result['authorize']);
+    if (result && result['authorize'])
+        return true;
+    else return false;
 }
 
 app.use(function (req, res, next) {
 
     var x_time = process.hrtime(req.startAt);
     x_time = (x_time[1] / 1000).toFixed(3);
-    res.writeHead(200, {'X-Time' :  x_time});
-    console.log('X-Time: ', x_time);
+    res.setHeader('X-Time', x_time);
     next();
 });
 
 
 
-app.use(function (req, res, next){
+app.use((err, req, res, next) => {
+    res.writeHead(503, {'X-Request-Error': err.toString()});
     res.end();
 });
+
+//если ничего не сделалось, значит не поняли запрос
+app.use(function (req, res, next) {
+    res.writeHead(503,{'X-Request-Error': "Unknown request"});
+    res.end();
+});
+
 
 
 // IMPORTANT. Это строка должна возвращать инстанс сервера
