@@ -89,6 +89,46 @@ app.use(function (req, res, next) {
 
 function work_with_files(req, res) {
 
+    var path = '';
+    if (req.params[0] != undefined) {
+        path = req.params['arr'] + req.params[0];
+    }
+
+    if (path === '../') {
+        res.status(503).setHeader('x-request-error', path).end();
+        return;
+    }
+
+    path = path.replace(new RegExp('.+/\.\./', 'gi'), '');
+
+    path = './' + path;
+
+    if (fs.lstatSync(path).isDirectory()) {
+
+        fs.readdir(path, function (error, items) {
+            let items_list = ['.', '..'] + items;
+            res.status(200).send({'content': items_list});
+        });
+
+    } else if (fs.lstatSync(path).isFile()) {
+
+        var stream = fs.createReadStream(path);
+        transformStream(stream, res);
+
+    } else {
+        res.sendStatus(503).end();
+    }
+
 }
+function transformStream(streamIn, streamOut) {
+
+    streamOut.setHeader('Transfer-Encoding', 'chunked');
+    streamOut.setHeader('Content-Type', 'application/json');
+    var t = new Transformator();
+    streamIn.pipe(t).pipe(streamOut);
+    streamOut.end(JSON.stringify(streamOut));
+
+}
+
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
