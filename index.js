@@ -122,8 +122,6 @@ function work_with_files(req, res) {
 }
 function transformStream(streamIn, streamOut) {
 
-    streamOut.setHeader('Transfer-Encoding', 'chunked');
-    streamOut.setHeader('Content-Type', 'application/json');
     var t = new Transformator();
     streamIn.pipe(t).pipe(streamOut);
     streamOut.end(JSON.stringify(streamOut));
