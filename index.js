@@ -48,9 +48,7 @@ function prepare_cookies(cookie) {
 
     cookie = cookie.split('\n');
     for (var i = 0; i < cookie.length; ++i) {
-        var temp = cookie[i].trim().split('=');
-        if (temp.length < 2)
-            return;
+        var temp = cookie[i].split('=');
         result[temp[0]] = temp;
     }
     if (result && result['authorize'])
