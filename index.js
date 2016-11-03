@@ -1,7 +1,7 @@
 'use strict';
 var fs = require('fs');
 var path = require('path');
-const Transformattor = require('./Transformatos');
+const Transformator = require('./Transformator');
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -32,6 +32,19 @@ app.use(function (req, res, next) {
         res.sendStatus(403);
         return;
     }
+    function prepare_cookies(cookie) {
+
+        var result = [];
+
+        cookie = cookie.split('\n');
+        for (var i = 0; i < cookie.length; ++i) {
+            var temp = cookie[i].split('=');
+            result[temp[0]] = temp;
+        }
+        if (result && result['authorize'])
+            return true;
+        else return false;
+    }
     if (prepare_cookies(current_cookie)) {
         next();
     }
@@ -42,19 +55,6 @@ app.use(function (req, res, next) {
 
 });
 
-function prepare_cookies(cookie) {
-
-    var result = [];
-
-    cookie = cookie.split('\n');
-    for (var i = 0; i < cookie.length; ++i) {
-        var temp = cookie[i].split('=');
-        result[temp[0]] = temp;
-    }
-    if (result && result['authorize'])
-        return true;
-    else return false;
-}
 
 app.use(function (req, res, next) {
 
@@ -65,7 +65,14 @@ app.use(function (req, res, next) {
 });
 
 
+app.get('/v1/', function (req, res) {
 
+    work_with_files(req, res);
+});
+
+app.get('/v1/(:arr)*', function (req, res, next) {
+    work_with_files(req, res);
+});
 app.use((error, req, res, next) => {
     res.writeHead(503, {'X-Request-Error': error.toString()});
     res.end();
@@ -78,6 +85,8 @@ app.use(function (req, res, next) {
 });
 
 
+function work_with_files(req, res) {
 
+}
 // IMPORTANT. Это строка должна возвращать инстанс сервера
 module.exports = app;
