@@ -66,8 +66,8 @@ app.use(function (req, res, next) {
 
 
 
-app.use((err, req, res, next) => {
-    res.writeHead(503, {'X-Request-Error': err.toString()});
+app.use((error, req, res, next) => {
+    res.writeHead(503, {'X-Request-Error': error.toString()});
     res.end();
 });
 
