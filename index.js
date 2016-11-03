@@ -10,7 +10,6 @@ app.listen(PORT, function () {
     console.log('App is listen on ${PORT}');
 });
 
-//измеряем время
 app.use(function (req, res, next) {
     req.startAt = process.hrtime();
     next();
@@ -18,8 +17,8 @@ app.use(function (req, res, next) {
 
 
 app.use(function (req, res, next) {
-    var method = req.method; //'GET'
-    var url = req.url; // /v(number)/..
+    var method = req.method;
+    var url = req.url;
     res.setHeader('X-Request-Url', method + ' ' + url);
     next();
 });
