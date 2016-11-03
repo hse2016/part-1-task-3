@@ -28,7 +28,7 @@ app.use(function (req, res, next) {
 
     var current_cookie = req.headers.cookie;
 
-    if (!current_cookie){
+    if (!current_cookie) {
         res.sendStatus(403);
         return;
     }
@@ -45,12 +45,12 @@ app.use(function (req, res, next) {
             return true;
         else return false;
     }
+
     if (prepare_cookies(current_cookie)) {
         next();
     }
     else
         res.sendStatus(403);
-
 
 
 });
@@ -79,7 +79,7 @@ app.use((error, req, res, next) => {
 });
 
 app.use(function (req, res, next) {
-    res.writeHead(503,{'X-Request-Error': "Unknown request"});
+    res.writeHead(503, {'X-Request-Error': "Unknown request"});
     res.end();
 });
 

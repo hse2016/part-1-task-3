@@ -14,7 +14,7 @@ class Transformator extends Transform {
     _transform(chunk, callback) {
         var str = chunk.toString('utf8');
         var new_str = this.translit(str);
-         this.current_str = new_str;
+        this.current_str = new_str;
         this.push(new_str);
         callback();
     }
@@ -24,19 +24,18 @@ class Transformator extends Transform {
             for (let symbol in rus_to_eng) {
                 string = string.replace(new RegExp(symbol, 'g'), rus_to_eng[symbol]);
             }
-        else if (isRus(string))
-            
         string = '{ "content" : "' + string;
 
         return string;
 
     }
+
     _flush(callback) {
 
         let str = this.current_str;
-            str = str.toString('utf8');
-            let new_str = this.translit(str);
-            this.push(new_str + '"}');
+        str = str.toString('utf8');
+        let new_str = this.translit(str);
+        this.push(new_str + '"}');
 
 
         callback();
