@@ -78,12 +78,14 @@ app.use((error, req, res, next) => {
     res.end();
 });
 
-//если ничего не сделалось, значит не поняли запрос
 app.use(function (req, res, next) {
     res.writeHead(503,{'X-Request-Error': "Unknown request"});
     res.end();
 });
 
+app.use(function (req, res, next) {
+    res.end();
+});
 
 function work_with_files(req, res) {
 
